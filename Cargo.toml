@@ -1,0 +1,6 @@
+[package]
+name = "smml"
+version = "0.1.0"
+authors = ["Robert Węcławski <r.weclawski@gmail.com>"]
+
+[dependencies]
