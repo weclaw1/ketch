@@ -10,9 +10,13 @@ use gfx_backend_vulkan as backend;
 #[cfg(feature = "gl")]
 use backend::glutin::GlContext;
 
+use gfx_hal::Backend;
 use winit::{EventsLoop, WindowBuilder};
 
 use gfx_hal::Instance;
+use gfx_hal::format::{AsFormat, Rgba8Srgb};
+
+use log::*;
 
 use crate::settings::Settings;
 
@@ -23,7 +27,7 @@ struct WindowState {
 }
 
 impl WindowState {
-    fn new(settings: &Settings) -> WindowState {
+    fn new(settings: &Settings) -> Self {
         let events_loop = winit::EventsLoop::new();
 
         let window_builder = winit::WindowBuilder::new()
@@ -37,16 +41,31 @@ impl WindowState {
     }
 }
 
-pub struct Renderer {
+pub struct Renderer<B: Backend> {
 
 }
 
-impl Renderer {
+impl<B: Backend> Renderer<B> {
+    pub fn new(settings: &Settings) -> Self {
 
-    //#[cfg(any(feature = "vulkan", feature = "dx12", feature = "metal"))]
-    fn create_backend(window_state: &mut WindowState) -> (BackendState<backend::Backend>, backend::Instance) {
-        let window = window_state.window_builder
-                                 .build(&window_state.events_loop)
+    }
+
+}
+
+struct BackendState<B: Backend> {
+    surface: B::Surface,
+    adapter: AdapterState<B>,
+    #[cfg(any(feature = "vulkan", feature = "dx12", feature = "metal"))]
+    #[allow(dead_code)]
+    window: winit::Window,
+}
+
+impl<B: Backend> BackendState<B> {
+
+    #[cfg(any(feature = "vulkan", feature = "dx12", feature = "metal"))]
+    fn create_backend(window: &mut WindowState) -> (BackendState<backend::Backend>, backend::Instance) {
+        let window = window.window_builder
+                                 .build(&window.events_loop)
                                  .unwrap();
 
         let instance = backend::Instance::create("smml", 1);
@@ -62,24 +81,21 @@ impl Renderer {
         )
     }
 
-    #[cfg(feature = "gl")]
-    fn create_backend(window_state: &mut WindowState) -> (BackendState<backend::Backend>, ()) {
-        let window = {
-            let builder =
-                back::config_context(
-                    back::glutin::ContextBuilder::new(),
-                    ColorFormat::SELF,
-                    None,
-                )
-                .with_vsync(true);
-            back::glutin::GlWindow::new(
-                window_state.wb.take().unwrap(),
-                builder,
-                &window_state.events_loop,
-            ).unwrap()
-        };
+    //#[cfg(feature = "gl")]
+    fn create_backend(window: &mut WindowState) -> (BackendState<backend::Backend>, ()) {
+        let builder = backend::config_context(
+                        backend::glutin::ContextBuilder::new(),
+                        Rgba8Srgb::SELF,
+                        None,
+                     ).with_vsync(true);
 
-        let surface = back::Surface::from_window(window);
+        let window = backend::glutin::GlWindow::new(
+                        window.window_builder,
+                        builder,
+                        &window.events_loop,
+                     ).unwrap();
+
+        let surface = backend::Surface::from_window(window);
         let mut adapters = surface.enumerate_adapters();
         (
             BackendState {
