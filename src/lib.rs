@@ -1,9 +1,9 @@
-mod render;
+mod renderer;
 mod settings;
 
 use gfx_hal::Backend;
 
-use self::render::renderer::{Renderer};
+use self::renderer::{Renderer};
 use self::settings::Settings;
 
 /// A struct representing the top level of this library.
