@@ -6,6 +6,7 @@ use crate::settings::Settings;
 
 use vulkano::instance::{Instance, InstanceCreationError, PhysicalDevice, PhysicalDeviceType, PhysicalDevicesIter};
 use vulkano::device::{Device};
+use vulkano::swapchain::{PresentMode, Swapchain, SurfaceTransform, CompositeAlpha};
 use winit::dpi::LogicalSize;
 use winit::{EventsLoop, WindowBuilder};
 
@@ -57,6 +58,48 @@ impl Renderer {
         ).expect("failed to create device");
 
         let queues = Queues::new(queues);
+
+        let (swapchain, images) = {
+
+            let capabilities = surface.capabilities(physical_device).expect("failed to get surface capabilities");
+            let usage = capabilities.supported_usage_flags;
+            let format = capabilities.supported_formats[0].0;
+
+            let initial_dimensions = if let Some(dimensions) = window.get_inner_size() {
+                let dimensions: (u32, u32) = dimensions.to_physical(window.get_hidpi_factor()).into();
+                [dimensions.0, dimensions.1]
+            } else {
+                panic!("window was closed during renderer creation");
+            };
+
+            let present_mode = {
+                if capabilities.present_modes.mailbox {
+                    info!("Using Mailbox presentation mode");
+                    PresentMode::Mailbox
+                } else {
+                    info!("Using Fifo presentation mode");
+                    PresentMode::Fifo
+                }
+            };
+
+            Swapchain::new(
+                device.clone(),
+                surface.clone(),
+                capabilities.min_image_count,
+                format,
+                initial_dimensions,
+                1,
+                usage,
+                &queues.graphics_queue(),
+                SurfaceTransform::Identity,
+                CompositeAlpha::Opaque,
+                present_mode,
+                true,
+                None
+            )
+            .expect("failed to create swapchain")
+
+        };
 
         Ok(Renderer {})
     }
