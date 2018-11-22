@@ -1,4 +1,5 @@
 mod queues;
+mod uniform_manager;
 
 use log::*;
 
@@ -13,7 +14,6 @@ use winit::{EventsLoop, WindowBuilder};
 use vulkano_win::{VkSurfaceBuild, CreationError as WindowCreationError};
 
 use crate::renderer::queues::{find_queues, Queues};
-
 
 pub struct Renderer {
 
