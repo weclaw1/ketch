@@ -1,5 +1,6 @@
 mod queues;
 mod uniform_manager;
+mod shader;
 
 use log::*;
 
@@ -14,6 +15,7 @@ use winit::{EventsLoop, WindowBuilder};
 use vulkano_win::{VkSurfaceBuild, CreationError as WindowCreationError};
 
 use crate::renderer::queues::{find_queues, Queues};
+use crate::renderer::uniform_manager::UniformManager;
 
 pub struct Renderer {
 
@@ -100,6 +102,8 @@ impl Renderer {
             .expect("failed to create swapchain")
 
         };
+
+        let uniform_manager = UniformManager::new(device.clone());
 
         Ok(Renderer {})
     }
