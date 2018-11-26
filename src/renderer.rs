@@ -47,7 +47,7 @@ impl Renderer {
         };
 
         let surface = WindowBuilder::new().with_title(settings.window_title())
-                                          .with_dimensions(LogicalSize::new(settings.scr_width(), settings.scr_height()))
+                                          .with_dimensions(settings.window_size().clone())
                                           .build_vk_surface(events_loop, instance.clone())?;
         let window = surface.window();
 
