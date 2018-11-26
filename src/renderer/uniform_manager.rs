@@ -8,7 +8,7 @@ use nalgebra_glm::Mat4;
 use std::sync::Arc;
 
 use crate::settings::Settings;
-use crate::renderer::shader::shaders::transformation_data::ty::TransformationData;
+use crate::renderer::shader::vertex_shader::ty::TransformationData;
 
 pub struct UniformManager {
     // data used in transformations (model, view, projection matrix)

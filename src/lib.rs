@@ -1,5 +1,6 @@
 mod renderer;
 mod settings;
+mod resource;
 
 use self::renderer::{Renderer};
 use self::settings::Settings;

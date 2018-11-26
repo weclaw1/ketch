@@ -8,21 +8,31 @@ use crate::settings::Settings;
 
 use vulkano::instance::{Instance, InstanceCreationError, PhysicalDevice, PhysicalDeviceType, PhysicalDevicesIter};
 use vulkano::device::{Device};
-use vulkano::swapchain::{PresentMode, Swapchain, SurfaceTransform, CompositeAlpha};
+use vulkano::pipeline::{GraphicsPipeline, GraphicsPipelineAbstract};
+use vulkano::pipeline::viewport::Viewport;
+use vulkano::image::SwapchainImage;
+use vulkano::swapchain::{Surface, PresentMode, Swapchain, SurfaceTransform, CompositeAlpha};
+use vulkano::single_pass_renderpass;
+use vulkano::framebuffer::{RenderPassAbstract, Framebuffer, FramebufferAbstract, Subpass};
 use winit::dpi::LogicalSize;
-use winit::{EventsLoop, WindowBuilder};
+use winit::{EventsLoop, WindowBuilder, Window};
 
 use vulkano_win::{VkSurfaceBuild, CreationError as WindowCreationError};
 
+use std::sync::Arc;
+
 use crate::renderer::queues::{find_queues, Queues};
 use crate::renderer::uniform_manager::UniformManager;
+use crate::renderer::shader::ShaderSet;
 
 pub struct Renderer {
-
+    instance: Arc<Instance>,
+    surface: Arc<Surface<Window>>,
+    
 }
 
 impl Renderer {
-    pub fn new(settings: &Settings) -> Result<Self, RendererCreationError> {
+    pub fn new(settings: &Settings, events_loop: &EventsLoop) -> Result<Self, RendererCreationError> {
         let instance = {
             let extensions = vulkano_win::required_extensions();
             Instance::new(None, &extensions, None)
@@ -36,10 +46,9 @@ impl Renderer {
             None => panic!("Couldn't find physical device!")
         };
 
-        let events_loop = EventsLoop::new();
         let surface = WindowBuilder::new().with_title(settings.window_title())
                                           .with_dimensions(LogicalSize::new(settings.scr_width(), settings.scr_height()))
-                                          .build_vk_surface(&events_loop, instance.clone())?;
+                                          .build_vk_surface(events_loop, instance.clone())?;
         let window = surface.window();
 
         let physical_queues = queues::find_queues(&physical_device, &surface);
@@ -105,11 +114,78 @@ impl Renderer {
 
         let uniform_manager = UniformManager::new(device.clone());
 
+        let shader_set = ShaderSet::load(device.clone());
+
+        let render_pass = Arc::new(
+            single_pass_renderpass!(device.clone(),
+                attachments: {
+                    color: {
+                        load: Clear,
+                        store: Store,
+                        format: swapchain.format(),
+                        samples: 1,
+                    }
+                },
+                pass: {
+                    color: [color],
+                    depth_stencil: {}
+                }
+            ).expect("Couldn't create render pass")
+        );
+
+        let pipeline = create_pipeline(device.clone(), &shader_set, &images, render_pass.clone());
+        let framebuffers = create_framebuffers(device.clone(), &images, render_pass.clone());
+
         Ok(Renderer {})
     }
 
 }
 
+fn create_framebuffers(
+    device: Arc<Device>, 
+    images: &[Arc<SwapchainImage<Window>>], 
+    render_pass: Arc<RenderPassAbstract + Send + Sync>
+) -> Vec<Arc<FramebufferAbstract + Send + Sync>> {
+    
+    let dimensions = images[0].dimensions();
+
+    let framebuffers = images.iter().map(|image| {
+        Arc::new(
+            Framebuffer::start(render_pass.clone())
+                        .add(image.clone()).unwrap()
+                        .build().unwrap()
+        ) as Arc<FramebufferAbstract + Send + Sync>}
+    ).collect::<Vec<_>>();
+
+    framebuffers
+}
+
+fn create_pipeline(
+    device: Arc<Device>, 
+    shader_set: &ShaderSet, 
+    images: &[Arc<SwapchainImage<Window>>], 
+    render_pass: Arc<RenderPassAbstract + Send + Sync>
+) -> Arc<GraphicsPipelineAbstract + Send + Sync> {
+    
+    let dimensions = images[0].dimensions();
+
+    let pipeline = Arc::new(GraphicsPipeline::start()
+        .vertex_input(shader_set.vertex_layout())
+        .vertex_shader(shader_set.vertex_shader().main_entry_point(), ())
+        .triangle_list()
+        .viewports_dynamic_scissors_irrelevant(1)
+        .viewports(std::iter::once(Viewport {
+            origin: [0.0, 0.0],
+            dimensions: [dimensions[0] as f32, dimensions[1] as f32],
+            depth_range: 0.0 .. 1.0,
+        }))
+        .fragment_shader(shader_set.fragment_shader().main_entry_point(), ())
+        .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+        .build(device.clone())
+        .unwrap());
+
+    pipeline
+}
 
 fn rank_devices(devices: PhysicalDevicesIter) -> Option<PhysicalDevice> {
     devices.into_iter().map(|device|
