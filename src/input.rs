@@ -8,6 +8,7 @@ use winit::Event;
 use winit::WindowEvent;
 
 pub struct InputSystem<T: InputMapping> {
+    settings: Rc<Settings>,
     events_loop: EventsLoop,
     input_mapping: Option<T>,
 }
@@ -72,11 +73,11 @@ impl<T: InputMapping> InputSystem<T> {
                                                       .filter_map(|event| input_event::to_input_event(event))
                                                       .collect();
 
-            input_mapping.update_input(input_events);
+            input_mapping.update_input(&input_events);
         }
     }
 }
 
 pub trait InputMapping {
-    fn update_input(&mut self, input: Vec<InputEvent>);
+    fn update_input(&mut self, input: &[InputEvent]);
 }
