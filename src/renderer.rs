@@ -2,6 +2,8 @@ mod queues;
 mod uniform_manager;
 mod shader;
 
+use std::cell::RefCell;
+use std::rc::Rc;
 use log::*;
 
 use crate::settings::Settings;
@@ -11,11 +13,13 @@ use vulkano::device::{Device};
 use vulkano::pipeline::{GraphicsPipeline, GraphicsPipelineAbstract};
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::image::SwapchainImage;
-use vulkano::swapchain::{Surface, PresentMode, Swapchain, SurfaceTransform, CompositeAlpha};
+use vulkano::swapchain::{Surface, PresentMode, Swapchain, SurfaceTransform, CompositeAlpha, SwapchainCreationError};
 use vulkano::single_pass_renderpass;
 use vulkano::framebuffer::{RenderPassAbstract, Framebuffer, FramebufferAbstract, Subpass};
 use winit::dpi::LogicalSize;
 use winit::{EventsLoop, WindowBuilder, Window};
+use vulkano::sync::GpuFuture;
+use vulkano::sync;
 
 use vulkano_win::{VkSurfaceBuild, CreationError as WindowCreationError};
 
@@ -26,13 +30,25 @@ use crate::renderer::uniform_manager::UniformManager;
 use crate::renderer::shader::ShaderSet;
 
 pub struct Renderer {
+    settings: Rc<RefCell<Settings>>,
     instance: Arc<Instance>,
     surface: Arc<Surface<Window>>,
-    
+    device: Arc<Device>,
+    queues: Queues,
+    swapchain: Arc<Swapchain<Window>>,
+    images: Vec<Arc<SwapchainImage<Window>>>,
+    uniform_manager: UniformManager,
+    shader_set: ShaderSet,
+    render_pass: Arc<RenderPassAbstract + Send + Sync>,
+    pipeline: Arc<GraphicsPipelineAbstract + Send + Sync>,
+    framebuffers: Vec<Arc<FramebufferAbstract + Send + Sync>>,
+
+    recreate_swapchain: bool,
+    previous_frame_end: Box<GpuFuture>,
 }
 
 impl Renderer {
-    pub fn new(settings: &Settings, events_loop: &EventsLoop) -> Result<Self, RendererCreationError> {
+    pub fn new(settings: Rc<RefCell<Settings>>, events_loop: &EventsLoop) -> Result<Self, RendererCreationError> {
         let instance = {
             let extensions = vulkano_win::required_extensions();
             Instance::new(None, &extensions, None)
@@ -46,8 +62,8 @@ impl Renderer {
             None => panic!("Couldn't find physical device!")
         };
 
-        let surface = WindowBuilder::new().with_title(settings.window_title())
-                                          .with_dimensions(settings.window_size().clone())
+        let surface = WindowBuilder::new().with_title(settings.borrow().window_title())
+                                          .with_dimensions(settings.borrow().window_size().clone())
                                           .build_vk_surface(events_loop, instance.clone())?;
         let window = surface.window();
 
@@ -76,12 +92,7 @@ impl Renderer {
             let usage = capabilities.supported_usage_flags;
             let format = capabilities.supported_formats[0].0;
 
-            let initial_dimensions = if let Some(dimensions) = window.get_inner_size() {
-                let dimensions: (u32, u32) = dimensions.to_physical(window.get_hidpi_factor()).into();
-                [dimensions.0, dimensions.1]
-            } else {
-                panic!("window was closed during renderer creation");
-            };
+            let initial_dimensions = get_window_dimensions(window);
 
             let present_mode = {
                 if capabilities.present_modes.mailbox {
@@ -136,7 +147,49 @@ impl Renderer {
         let pipeline = create_pipeline(device.clone(), &shader_set, &images, render_pass.clone());
         let framebuffers = create_framebuffers(device.clone(), &images, render_pass.clone());
 
-        Ok(Renderer {})
+        Ok(Renderer {
+            settings,
+            instance,
+            surface,
+            device,
+            queues,
+            swapchain,
+            images,
+            uniform_manager,
+            shader_set,
+            render_pass,
+            pipeline,
+            framebuffers,
+            recreate_swapchain: false,
+            previous_frame_end: Box::new(sync::now(device.clone())) as Box<GpuFuture>
+        })
+    }
+
+    pub fn render(&mut self, asset_manager: &AssetManager) {
+        self.previous_frame_end.cleanup_finished();
+
+        if self.recreate_swapchain {
+            self.recreate_swapchain();
+        }
+
+        
+    }
+
+    fn recreate_swapchain(&mut self) {
+        let window_dimensions = get_window_dimensions(self.surface.window());
+
+        let (new_swapchain, new_images) = match self.swapchain.recreate_with_dimension(window_dimensions) {
+            Ok(r) => r,
+            Err(err) => panic!("{:?}", err)
+        };
+
+        self.swapchain = new_swapchain;
+        self.images = new_images;
+
+        self.pipeline = create_pipeline(self.device.clone(), &self.shader_set, &self.images, self.render_pass.clone());
+        self.framebuffers = create_framebuffers(self.device.clone(), &self.images, self.render_pass.clone());
+
+        self.recreate_swapchain = false;
     }
 
 }
@@ -197,6 +250,17 @@ fn rank_devices(devices: PhysicalDevicesIter) -> Option<PhysicalDevice> {
             PhysicalDeviceType::Other => (device, 0),
         }
     ).max_by(|x, y| x.1.cmp(&y.1)).map(|(device, _)| device)
+}
+
+fn get_window_dimensions(window: &Window) -> [u32; 2] {
+    let dimensions = if let Some(dimensions) = window.get_inner_size() {
+        let dimensions: (u32, u32) = dimensions.to_physical(window.get_hidpi_factor()).into();
+        [dimensions.0, dimensions.1]
+    } else {
+        panic!("window was closed when calling get_window_dimensions");
+    };
+
+    dimensions
 }
 
 #[derive(Debug)]

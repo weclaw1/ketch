@@ -3,21 +3,25 @@ pub mod input_event;
 use crate::settings::Settings;
 use crate::input::input_event::InputEvent;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use winit::EventsLoop;
 use winit::Event;
 use winit::WindowEvent;
 
 pub struct InputSystem<T: InputMapping> {
-    settings: Rc<Settings>,
+    settings: Rc<RefCell<Settings>>,
     events_loop: EventsLoop,
     input_mapping: Option<T>,
 }
 
 impl<T: InputMapping> InputSystem<T> {
-    pub fn new() -> Self {
+    pub fn new(settings: Rc<RefCell<Settings>>) -> Self {
         let events_loop = EventsLoop::new();
 
         InputSystem {
+            settings: settings,
             events_loop: events_loop,
             input_mapping: None,
         }
@@ -39,22 +43,22 @@ impl<T: InputMapping> InputSystem<T> {
         self.input_mapping.take()
     }
 
-    pub fn fetch_pending_input(&mut self, settings: &mut Settings) -> Vec<InputEvent> {
-        let events = self.load_events(settings);
+    pub fn fetch_pending_input(&mut self) -> Vec<InputEvent> {
+        let events = self.load_events();
 
         events.into_iter()
               .filter_map(|event| input_event::to_input_event(event))
               .collect()
     }
 
-    fn load_events(&mut self, settings: &mut Settings) -> Vec<Event> {
+    fn load_events(&mut self) -> Vec<Event> {
         let events = Vec::new();
         self.events_loop.poll_events(|input_event| {
             match input_event {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::CloseRequested => std::process::exit(0),
                     WindowEvent::Resized(logical_size) => {
-                        settings.set_window_size(logical_size);
+                        self.settings.borrow_mut().set_window_size(logical_size);
                     }
                     _ => events.push(input_event),
                 },
@@ -65,8 +69,8 @@ impl<T: InputMapping> InputSystem<T> {
         events
     }
 
-    pub fn update(&mut self, settings: &mut Settings) {
-        let events = self.load_events(settings);
+    pub fn update(&mut self) {
+        let events = self.load_events();
 
         if let Some(input_mapping) = self.input_mapping {
             let input_events: Vec<InputEvent> = events.into_iter()
