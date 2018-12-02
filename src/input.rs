@@ -58,8 +58,10 @@ impl<T: InputMapping> InputSystem<T> {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::CloseRequested => std::process::exit(0),
                     WindowEvent::Resized(logical_size) => {
-                        self.settings.borrow_mut().set_window_size(logical_size);
-                    }
+                        let dpi = self.settings.borrow().dpi();
+                        self.settings.borrow_mut().set_window_size(logical_size.to_physical(dpi));
+                    },
+                    WindowEvent::HiDpiFactorChanged(dpi) => self.settings.borrow_mut().set_dpi(dpi),
                     _ => events.push(input_event),
                 },
                 _ => events.push(input_event),

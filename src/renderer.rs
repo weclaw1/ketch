@@ -1,6 +1,6 @@
 mod queues;
 mod uniform_manager;
-mod shader;
+pub mod shader;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -63,7 +63,7 @@ impl Renderer {
         };
 
         let surface = WindowBuilder::new().with_title(settings.borrow().window_title())
-                                          .with_dimensions(settings.borrow().window_size().clone())
+                                          .with_dimensions(settings.borrow().window_size().to_logical(settings.borrow().dpi()))
                                           .build_vk_surface(events_loop, instance.clone())?;
         let window = surface.window();
 

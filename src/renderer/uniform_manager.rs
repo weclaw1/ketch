@@ -22,8 +22,6 @@ pub struct UniformManager {
 impl UniformManager {
     pub fn new(device: Arc<Device>) -> Self {
         let transformation_data = TransformationData {
-            camera_position: [0.0; 3],
-            _dummy0: [0; 4],
             model: Mat4::identity().into(),
             view: Mat4::identity().into(),
             proj: Mat4::identity().into(),

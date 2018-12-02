@@ -10,7 +10,6 @@ layout(location = 2) out vec4 o_color;
 
 //Global uniforms
 layout(set = 0, binding = 0) uniform TransformationData {
-  vec3 camera_position;
   mat4 model;
   mat4 view;
   mat4 proj;
