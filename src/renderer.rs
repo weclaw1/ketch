@@ -2,6 +2,7 @@ mod queues;
 mod uniform_manager;
 pub mod shader;
 
+use crate::resource::AssetManager;
 use std::cell::RefCell;
 use std::rc::Rc;
 use log::*;

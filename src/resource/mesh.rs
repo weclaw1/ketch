@@ -50,4 +50,8 @@ impl Mesh {
             index_buffer: index_buffer,
         }
     }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
 }
