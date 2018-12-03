@@ -20,14 +20,14 @@ pub struct Mesh {
     name: String,
 
     vertices: Vec<Vertex>,
-    vertex_buffer: Arc<ImmutableBuffer<Vertex>>,
+    vertex_buffer: Arc<ImmutableBuffer<[Vertex]>>,
 
     indices: Vec<u32>,
     index_buffer: Arc<ImmutableBuffer<[u32]>>,
 }
 
 impl Mesh {
-    pub fn new(name: &str, vertices: Vec<Vertex>, indices: Vec<Vertex>, upload_queue: Arc<Queue>) -> Self {
+    pub fn new(name: &str, vertices: Vec<Vertex>, indices: Vec<u32>, upload_queue: Arc<Queue>) -> Self {
         let (vertex_buffer, _buffer_future) = ImmutableBuffer::from_iter(
             vertices.iter().cloned(),
             BufferUsage::all(),

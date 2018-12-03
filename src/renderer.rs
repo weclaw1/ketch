@@ -20,6 +20,8 @@ use winit::dpi::LogicalSize;
 use winit::{EventsLoop, WindowBuilder, Window};
 use vulkano::sync::GpuFuture;
 use vulkano::sync;
+use vulkano::swapchain::{AcquireError};
+use vulkano::swapchain;
 
 use vulkano_win::{VkSurfaceBuild, CreationError as WindowCreationError};
 
@@ -92,7 +94,7 @@ impl Renderer {
             let usage = capabilities.supported_usage_flags;
             let format = capabilities.supported_formats[0].0;
 
-            let initial_dimensions = get_window_dimensions(window);
+            let initial_dimensions = get_window_dimensions(settings.clone(), window);
 
             let present_mode = {
                 if capabilities.present_modes.mailbox {
@@ -172,11 +174,21 @@ impl Renderer {
             self.recreate_swapchain();
         }
 
+        let (image_num, acquire_future) = match swapchain::acquire_next_image(self.swapchain.clone(), None) {
+            Ok(r) => r,
+            Err(AcquireError::OutOfDate) => {
+                self.recreate_swapchain = true;
+                return;
+            }
+            Err(err) => panic!("{:?}", err)
+        };
+
+        
         
     }
 
     fn recreate_swapchain(&mut self) {
-        let window_dimensions = get_window_dimensions(self.surface.window());
+        let window_dimensions = get_window_dimensions(self.settings.clone(), self.surface.window());
 
         let (new_swapchain, new_images) = match self.swapchain.recreate_with_dimension(window_dimensions) {
             Ok(r) => r,
@@ -252,9 +264,11 @@ fn rank_devices(devices: PhysicalDevicesIter) -> Option<PhysicalDevice> {
     ).max_by(|x, y| x.1.cmp(&y.1)).map(|(device, _)| device)
 }
 
-fn get_window_dimensions(window: &Window) -> [u32; 2] {
+fn get_window_dimensions(settings: Rc<RefCell<Settings>>, window: &Window) -> [u32; 2] {
     let dimensions = if let Some(dimensions) = window.get_inner_size() {
-        let dimensions: (u32, u32) = dimensions.to_physical(window.get_hidpi_factor()).into();
+        let dimensions = dimensions.to_physical(settings.borrow().dpi());
+        settings.borrow_mut().set_window_size(dimensions);
+        let dimensions: (u32, u32) = dimensions.into();
         [dimensions.0, dimensions.1]
     } else {
         panic!("window was closed when calling get_window_dimensions");
