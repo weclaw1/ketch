@@ -31,8 +31,18 @@ impl AssetManager {
                     None
                 }
             }).unwrap();
+            mesh.set_name(unique_name.as_str());
+            self.meshes.insert(unique_name, mesh);
         } else {
-
+            self.meshes.insert(mesh.name().to_string(), mesh);
         }
+    }
+
+    pub fn get_mesh(&self, name: &str) -> Option<&Mesh> {
+        self.meshes.get(name)
+    }
+
+    pub fn remove_mesh(&mut self, name: &str) {
+        self.meshes.remove(name);
     }
 }

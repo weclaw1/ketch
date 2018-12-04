@@ -27,7 +27,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn new(name: &str, vertices: Vec<Vertex>, indices: Vec<u32>, upload_queue: Arc<Queue>) -> Self {
+    pub fn new<S: Into<String>>(name: S, vertices: Vec<Vertex>, indices: Vec<u32>, upload_queue: Arc<Queue>) -> Self {
         let (vertex_buffer, _buffer_future) = ImmutableBuffer::from_iter(
             vertices.iter().cloned(),
             BufferUsage::all(),
@@ -41,7 +41,7 @@ impl Mesh {
         ).expect("failed to create index buffer");
 
         Mesh {
-            name: String::from(name),
+            name: name.into(),
             
             vertices: vertices,
             vertex_buffer: vertex_buffer,
@@ -53,5 +53,9 @@ impl Mesh {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn set_name<S: Into<String>>(&mut self, name: S) {
+        self.name = name.into();
     }
 }

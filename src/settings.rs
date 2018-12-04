@@ -9,9 +9,9 @@ pub struct Settings {
 }
 
 impl Settings {
-    pub fn new(window_title: &str, scr_width: f64, scr_height: f64) -> Self {
+    pub fn new<S: Into<String>>(window_title: S, scr_width: f64, scr_height: f64) -> Self {
         Settings {
-            window_title: String::from(window_title),
+            window_title: window_title.into(),
             window_size: PhysicalSize::new(scr_width, scr_height),
             dpi: 1.0,
             near_plane: 0.1,
@@ -29,10 +29,6 @@ impl Settings {
 
     pub fn window_title(&self) -> &str {
         &self.window_title
-    }
-
-    pub fn set_window_title(&mut self, value: &str) {
-        self.window_title = String::from(value);
     }
 
     pub fn near_plane(&self) -> f32 {
