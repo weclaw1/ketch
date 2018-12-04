@@ -45,4 +45,12 @@ impl AssetManager {
     pub fn remove_mesh(&mut self, name: &str) {
         self.meshes.remove(name);
     }
+
+    pub fn change_active_camera(&mut self, camera: Camera) {
+        self.active_camera = camera;
+    }
+
+    pub fn active_camera(&mut self) -> &mut Camera {
+        &mut self.active_camera
+    }
 }
