@@ -52,16 +52,17 @@ impl<T: InputMapping> InputSystem<T> {
     }
 
     fn load_events(&mut self) -> Vec<Event> {
-        let events = Vec::new();
+        let mut events = Vec::new();
+        let settings = self.settings.clone();
         self.events_loop.poll_events(|input_event| {
-            match input_event {
+            match &input_event {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::CloseRequested => std::process::exit(0),
                     WindowEvent::Resized(logical_size) => {
-                        let dpi = self.settings.borrow().dpi();
-                        self.settings.borrow_mut().set_window_size(logical_size.to_physical(dpi));
+                        let dpi = settings.borrow().dpi();
+                        settings.borrow_mut().set_window_size(logical_size.to_physical(dpi));
                     },
-                    WindowEvent::HiDpiFactorChanged(dpi) => self.settings.borrow_mut().set_dpi(dpi),
+                    WindowEvent::HiDpiFactorChanged(dpi) => settings.borrow_mut().set_dpi(*dpi),
                     _ => events.push(input_event),
                 },
                 _ => events.push(input_event),
@@ -74,7 +75,7 @@ impl<T: InputMapping> InputSystem<T> {
     pub fn update(&mut self) {
         let events = self.load_events();
 
-        if let Some(input_mapping) = self.input_mapping {
+        if let Some(input_mapping) = &mut self.input_mapping {
             let input_events: Vec<InputEvent> = events.into_iter()
                                                       .filter_map(|event| input_event::to_input_event(event))
                                                       .collect();
@@ -86,4 +87,12 @@ impl<T: InputMapping> InputSystem<T> {
 
 pub trait InputMapping {
     fn update_input(&mut self, input: &[InputEvent]);
+}
+
+pub struct NoInputMapping {}
+
+impl InputMapping for NoInputMapping {
+    fn update_input(&mut self, _input: &[InputEvent]) {
+
+    }
 }

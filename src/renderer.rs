@@ -1,4 +1,4 @@
-mod queues;
+pub mod queues;
 mod uniform_manager;
 pub mod shader;
 
@@ -10,6 +10,8 @@ use log::*;
 use crate::settings::Settings;
 
 use vulkano::instance::{Instance, InstanceCreationError, PhysicalDevice, PhysicalDeviceType, PhysicalDevicesIter};
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::device::{Device};
 use vulkano::pipeline::{GraphicsPipeline, GraphicsPipelineAbstract};
 use vulkano::pipeline::viewport::Viewport;
@@ -41,13 +43,13 @@ pub struct Renderer {
     swapchain: Arc<Swapchain<Window>>,
     images: Vec<Arc<SwapchainImage<Window>>>,
     uniform_manager: UniformManager,
-    shader_set: ShaderSet,
+    shader_set: Rc<ShaderSet>,
     render_pass: Arc<RenderPassAbstract + Send + Sync>,
     pipeline: Arc<GraphicsPipelineAbstract + Send + Sync>,
     framebuffers: Vec<Arc<FramebufferAbstract + Send + Sync>>,
 
     recreate_swapchain: bool,
-    previous_frame_end: Box<GpuFuture>,
+    previous_frame: Option<Box<GpuFuture>>,
 }
 
 impl Renderer {
@@ -128,7 +130,7 @@ impl Renderer {
 
         let uniform_manager = UniformManager::new(device.clone());
 
-        let shader_set = ShaderSet::load(device.clone());
+        let shader_set = Rc::new(ShaderSet::load(device.clone()));
 
         let render_pass = Arc::new(
             single_pass_renderpass!(device.clone(),
@@ -147,14 +149,14 @@ impl Renderer {
             ).expect("Couldn't create render pass")
         );
 
-        let pipeline = create_pipeline(device.clone(), &shader_set, &images, render_pass.clone());
+        let pipeline = create_pipeline(device.clone(), shader_set.clone(), &images, render_pass.clone());
         let framebuffers = create_framebuffers(device.clone(), &images, render_pass.clone());
 
         Ok(Renderer {
             settings,
             instance,
             surface,
-            device,
+            device: device.clone(),
             queues,
             swapchain,
             images,
@@ -164,12 +166,14 @@ impl Renderer {
             pipeline,
             framebuffers,
             recreate_swapchain: false,
-            previous_frame_end: Box::new(sync::now(device.clone())) as Box<GpuFuture>
+            previous_frame: None,
         })
     }
 
-    pub fn render(&mut self, asset_manager: &AssetManager) {
-        self.previous_frame_end.cleanup_finished();
+    pub fn render(&mut self, asset_manager: &mut AssetManager) {
+        if let Some(previous_frame) = &mut self.previous_frame {
+            previous_frame.cleanup_finished();
+        }
 
         if self.recreate_swapchain {
             self.recreate_swapchain();
@@ -184,8 +188,56 @@ impl Renderer {
             Err(err) => panic!("{:?}", err)
         };
 
-        
-        
+
+        let mut command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queues.graphics_queue().family()).unwrap()
+            .begin_render_pass(
+                self.framebuffers[image_num].clone(), false,
+                vec![
+                    [0.0, 0.0, 1.0, 1.0].into(),
+                ]
+            ).unwrap();
+
+        let uniform_data = asset_manager.active_camera().as_uniform_data();
+
+        for (mesh_name, mesh) in asset_manager.meshes() {
+            self.uniform_manager.update(uniform_data);
+            let uniform_buffer_subbuffer = self.uniform_manager.get_subbuffer_data();
+
+            let descriptor_set = Arc::new(PersistentDescriptorSet::start(self.pipeline.clone(), 0)
+                .add_buffer(uniform_buffer_subbuffer).unwrap()
+                .build().unwrap()
+            );
+
+            command_buffer = command_buffer.draw_indexed(
+                self.pipeline.clone(), 
+                &DynamicState::none(), 
+                vec!(mesh.vertex_buffer()),
+                mesh.index_buffer(), 
+                descriptor_set.clone(),
+                (),
+            ).unwrap();
+        }
+
+        let command_buffer = command_buffer.end_render_pass().unwrap().build().unwrap();
+
+        let future = self.previous_frame.take()
+                                        .unwrap_or_else(|| Box::new(sync::now(self.device.clone())) as Box<_>)
+                                        .join(acquire_future)
+                                        .then_execute(self.queues.graphics_queue(), command_buffer).unwrap()
+                                        .then_swapchain_present(self.queues.graphics_queue(), self.swapchain.clone(), image_num)
+                                        .then_signal_fence_and_flush();
+
+        match future {
+            Ok(future) => {
+                self.previous_frame = Some(Box::new(future) as Box<_>);
+            }
+            Err(sync::FlushError::OutOfDate) => {
+                self.recreate_swapchain = true;
+            }
+            Err(e) => {
+                error!("{:?}", e);
+            }
+        }   
     }
 
     fn recreate_swapchain(&mut self) {
@@ -199,10 +251,14 @@ impl Renderer {
         self.swapchain = new_swapchain;
         self.images = new_images;
 
-        self.pipeline = create_pipeline(self.device.clone(), &self.shader_set, &self.images, self.render_pass.clone());
+        self.pipeline = create_pipeline(self.device.clone(), self.shader_set.clone(), &self.images, self.render_pass.clone());
         self.framebuffers = create_framebuffers(self.device.clone(), &self.images, self.render_pass.clone());
 
         self.recreate_swapchain = false;
+    }
+
+    pub fn get_queues(&self) -> Queues {
+        self.queues.clone()
     }
 
 }
@@ -228,7 +284,7 @@ fn create_framebuffers(
 
 fn create_pipeline(
     device: Arc<Device>, 
-    shader_set: &ShaderSet, 
+    shader_set: Rc<ShaderSet>, 
     images: &[Arc<SwapchainImage<Window>>], 
     render_pass: Arc<RenderPassAbstract + Send + Sync>
 ) -> Arc<GraphicsPipelineAbstract + Send + Sync> {
@@ -236,7 +292,7 @@ fn create_pipeline(
     let dimensions = images[0].dimensions();
 
     let pipeline = Arc::new(GraphicsPipeline::start()
-        .vertex_input(shader_set.vertex_layout())
+        .vertex_input(ShaderSet::vertex_layout())
         .vertex_shader(shader_set.vertex_shader().main_entry_point(), ())
         .triangle_list()
         .viewports_dynamic_scissors_irrelevant(1)

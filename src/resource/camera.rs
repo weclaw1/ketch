@@ -2,8 +2,9 @@ use crate::settings::Settings;
 use std::cell::RefCell;
 use std::rc::Rc;
 use crate::renderer::shader::vertex_shader::ty::TransformationData;
-use nalgebra_glm::{Vec3, Mat4};
+use nalgebra_glm::{U3, Vec3, Mat4};
 use nalgebra_glm as glm;
+use nalgebra_glm::Dimension;
 
 const MAX_PITCH: f32 = 89.0;
 const MIN_PITCH: f32 = -89.0;
@@ -31,7 +32,7 @@ impl Camera {
         let front = Vec3::new(0.0, 0.0, -1.0);
         let up = Vec3::new(0.0, 1.0, 0.0);
         let world_up = up;
-        let right = glm::normalize(&glm::cross(&front, &world_up));
+        let mut right = glm::normalize(&glm::cross::<f32, U3>(&front, &world_up));
 
         Camera {
             settings,
@@ -100,7 +101,7 @@ impl Camera {
         self.front.z = self.yaw.to_radians().sin() * self.pitch.to_radians().cos();
 
         self.front = glm::normalize(&self.front);
-        self.right = glm::normalize(&glm::cross(&self.front, &self.world_up));
+        self.right = glm::normalize(&glm::cross::<f32, U3>(&self.front, &self.world_up));
     }
 
     pub fn get_view_matrix(&self) -> Mat4 {
@@ -111,7 +112,7 @@ impl Camera {
         let (window_size, near_plane, far_plane) = {
             let settings = self.settings.borrow();
             (
-                settings.window_size(),
+                settings.window_size().clone(),
                 settings.near_plane(),
                 settings.far_plane(),
             )

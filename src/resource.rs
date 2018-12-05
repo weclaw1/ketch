@@ -1,3 +1,6 @@
+use crate::resource::mesh::Vertex;
+use crate::renderer::queues::Queues;
+use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 use crate::settings::Settings;
 use std::cell::RefCell;
@@ -11,14 +14,21 @@ pub mod camera;
 pub struct AssetManager {
     meshes: HashMap<String, Mesh>,
     active_camera: Camera,
+
+    queues: Queues,
 }
 
 impl AssetManager {
-    pub fn new(settings: Rc<RefCell<Settings>>) -> Self {
+    pub fn new(settings: Rc<RefCell<Settings>>, queues: Queues) -> Self {
         AssetManager {
             meshes: HashMap::new(),
             active_camera: Camera::new(settings),
+            queues,
         }
+    }
+
+    pub fn create_mesh<S: Into<String>>(&self, name: S, vertices: Vec<Vertex>, indices: Vec<u32>) -> Mesh {
+        Mesh::new(name, vertices, indices, self.queues.graphics_queue())
     }
 
     pub fn add_mesh(&mut self, mut mesh: Mesh) {
@@ -46,11 +56,19 @@ impl AssetManager {
         self.meshes.remove(name);
     }
 
+    pub fn meshes(&self) -> Iter<String, Mesh> {
+        self.meshes.iter()
+    }
+
     pub fn change_active_camera(&mut self, camera: Camera) {
         self.active_camera = camera;
     }
 
-    pub fn active_camera(&mut self) -> &mut Camera {
+    pub fn active_camera(&self) -> &Camera {
+        &self.active_camera
+    }
+
+    pub fn active_camera_mut(&mut self) -> &mut Camera {
         &mut self.active_camera
     }
 }

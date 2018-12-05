@@ -1,3 +1,4 @@
+use vulkano::buffer::BufferAccess;
 use std::sync::Arc;
 
 use vulkano::impl_vertex;
@@ -57,5 +58,13 @@ impl Mesh {
 
     pub fn set_name<S: Into<String>>(&mut self, name: S) {
         self.name = name.into();
+    }
+
+    pub fn vertex_buffer(&self) -> Arc<ImmutableBuffer<[Vertex]>> {
+        self.vertex_buffer.clone()
+    }
+
+    pub fn index_buffer(&self) -> Arc<ImmutableBuffer<[u32]>> {
+        self.index_buffer.clone()
     }
 }
