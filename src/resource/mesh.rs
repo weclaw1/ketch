@@ -9,9 +9,9 @@ use vulkano::device::Queue;
 ///Defines the information a Vertex should have
 #[derive(Clone,Copy)]
 pub struct Vertex {
-    position: [f32; 3],
-    tex_coord: [f32; 2],
-    color: [f32; 4],
+    pub position: [f32; 3],
+    pub tex_coord: [f32; 2],
+    pub color: [f32; 4],
 }
 
 impl_vertex!(Vertex, position, tex_coord, color);
