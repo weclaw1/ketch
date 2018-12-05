@@ -19,6 +19,8 @@ void main() {
   vec4 pos = u_main.model * vec4(position, 1.0);
   //The proj has been manipulated like here: https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
   gl_Position = u_main.proj * u_main.view * u_main.model * vec4(position, 1.0);
+  gl_Position.y = -gl_Position.y;
+  gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 
   o_position = vec3(pos.xyz);
   o_tex_coord = tex_coord;
