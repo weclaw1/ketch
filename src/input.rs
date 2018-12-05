@@ -10,7 +10,7 @@ use winit::EventsLoop;
 use winit::Event;
 use winit::WindowEvent;
 
-pub struct InputSystem<T: InputMapping> {
+pub struct InputSystem<T: InputMapping = NoInputMapping> {
     settings: Rc<RefCell<Settings>>,
     events_loop: EventsLoop,
     input_mapping: Option<T>,
