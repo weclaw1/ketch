@@ -19,7 +19,7 @@ const DURATION_PER_UPDATE: Duration = Duration::from_millis(16);
 
 /// A struct representing the top level of this library.
 /// It provides access to all the subsystems that can be used.
-pub struct Smml<T: InputMapping> {
+pub struct Smml<T: InputMapping = NoInputMapping> {
     renderer: Renderer,
     asset_manager: AssetManager,
     input_system: InputSystem<T>,
