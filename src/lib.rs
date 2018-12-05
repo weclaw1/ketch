@@ -1,7 +1,7 @@
 mod renderer;
-mod settings;
-mod resource;
-mod input;
+pub mod settings;
+pub mod resource;
+pub mod input;
 
 use crate::input::NoInputMapping;
 use crate::resource::AssetManager;
