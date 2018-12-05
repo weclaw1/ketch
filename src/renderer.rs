@@ -193,7 +193,7 @@ impl Renderer {
             .begin_render_pass(
                 self.framebuffers[image_num].clone(), false,
                 vec![
-                    [0.0, 0.0, 1.0, 1.0].into(),
+                    [0.0, 0.0, 0.0, 1.0].into(),
                 ]
             ).unwrap();
 
