@@ -31,7 +31,7 @@ impl AssetManager {
         Mesh::new(name, vertices, indices, self.queues.graphics_queue())
     }
 
-    pub fn add_mesh(&mut self, mut mesh: Mesh) {
+    pub fn add_mesh(&mut self, mut mesh: Mesh) -> String {
         if self.meshes.contains_key(mesh.name()) {
             let unique_name = (2..).find_map(|x| {
                 let key = mesh.name().to_owned() + "_" + &x.to_string();
@@ -42,9 +42,12 @@ impl AssetManager {
                 }
             }).unwrap();
             mesh.set_name(unique_name.as_str());
-            self.meshes.insert(unique_name, mesh);
+            self.meshes.insert(unique_name.clone(), mesh);
+            unique_name
         } else {
-            self.meshes.insert(mesh.name().to_string(), mesh);
+            let mesh_name = mesh.name().to_string();
+            self.meshes.insert(mesh_name.clone(), mesh);
+            mesh_name
         }
     }
 
