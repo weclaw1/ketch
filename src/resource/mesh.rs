@@ -10,11 +10,10 @@ use vulkano::device::Queue;
 #[derive(Clone,Copy)]
 pub struct Vertex {
     pub position: [f32; 3],
-    pub tex_coord: [f32; 2],
     pub color: [f32; 4],
 }
 
-impl_vertex!(Vertex, position, tex_coord, color);
+impl_vertex!(Vertex, position, color);
 
 #[derive(Clone)]
 pub struct Mesh {

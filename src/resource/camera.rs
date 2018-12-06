@@ -28,7 +28,7 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(settings: Rc<RefCell<Settings>>) -> Self {
-        let position = Vec3::new(0.0, 0.0, 0.0);
+        let position = Vec3::new(0.0, 0.0, 3.0);
         let front = Vec3::new(0.0, 0.0, -1.0);
         let up = Vec3::new(0.0, 1.0, 0.0);
         let world_up = up;

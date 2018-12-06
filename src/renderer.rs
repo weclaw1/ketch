@@ -200,6 +200,7 @@ impl Renderer {
         let uniform_data = asset_manager.active_camera().as_uniform_data();
 
         for (mesh_name, mesh) in asset_manager.meshes() {
+            debug!("{:?}", mesh_name);
             self.uniform_manager.update(uniform_data);
             let uniform_buffer_subbuffer = self.uniform_manager.get_subbuffer_data();
 
