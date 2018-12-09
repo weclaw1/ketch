@@ -7,22 +7,30 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use crate::resource::mesh::Mesh;
 use crate::resource::camera::Camera;
+use crate::resource::scene::Scene;
 
 pub mod mesh;
 pub mod camera;
+pub mod scene;
+pub mod object;
 
-pub struct AssetManager {
+pub struct AssetManager<'a> {
+    settings: Rc<RefCell<Settings>>,
+    active_scene: Option<&'a mut Scene<'a>>,
+
+    scenes: HashMap<String, Scene<'a>>,
     meshes: HashMap<String, Mesh>,
-    active_camera: Camera,
 
     queues: Queues,
 }
 
-impl AssetManager {
+impl<'a> AssetManager<'a> {
     pub fn new(settings: Rc<RefCell<Settings>>, queues: Queues) -> Self {
         AssetManager {
+            settings,
+            active_scene: None,
+            scenes: HashMap::new(),
             meshes: HashMap::new(),
-            active_camera: Camera::new(settings),
             queues,
         }
     }
@@ -31,47 +39,41 @@ impl AssetManager {
         Mesh::new(name, vertices, indices, self.queues.graphics_queue())
     }
 
-    pub fn add_mesh(&mut self, mut mesh: Mesh) -> String {
-        if self.meshes.contains_key(mesh.name()) {
-            let unique_name = (2..).find_map(|x| {
-                let key = mesh.name().to_owned() + "_" + &x.to_string();
-                if self.meshes.contains_key(&key) {
-                    Some(key)
-                } else {
-                    None
-                }
-            }).unwrap();
-            mesh.set_name(unique_name.as_str());
-            self.meshes.insert(unique_name.clone(), mesh);
-            unique_name
-        } else {
-            let mesh_name = mesh.name().to_string();
-            self.meshes.insert(mesh_name.clone(), mesh);
-            mesh_name
-        }
+    pub fn add_mesh(&mut self, mesh: Mesh) {
+        self.meshes.insert(mesh.name().to_string(), mesh);
     }
 
-    pub fn get_mesh(&self, name: &str) -> Option<&Mesh> {
+    pub fn mesh(&self, name: &str) -> Option<&Mesh> {
         self.meshes.get(name)
     }
 
-    pub fn remove_mesh(&mut self, name: &str) {
-        self.meshes.remove(name);
+    pub fn remove_mesh(&mut self, name: &str) -> Option<Mesh> {
+        self.meshes.remove(name)
     }
 
-    pub fn meshes(&self) -> Iter<String, Mesh> {
-        self.meshes.iter()
+    pub fn add_scene(&mut self, scene: Scene<'a>) {
+        self.scenes.insert(scene.name().to_string(), scene);
     }
 
-    pub fn change_active_camera(&mut self, camera: Camera) {
-        self.active_camera = camera;
+    pub fn scene_mut(&mut self, name: &str) -> Option<&mut Scene<'a>> {
+        self.scenes.get_mut(name)
     }
 
-    pub fn active_camera(&self) -> &Camera {
-        &self.active_camera
+    pub fn remove_scene(&mut self, name: &str) -> Option<Scene<'a>> {
+        self.scenes.remove(name)
     }
 
-    pub fn active_camera_mut(&mut self) -> &mut Camera {
-        &mut self.active_camera
+    pub fn active_scene(&self) -> Option<&Scene<'a>> {
+        match &self.active_scene {
+            Some(scene) => Some(&*scene),
+            None => None,
+        }
+    }
+
+    pub fn active_scene_mut(&mut self) -> Option<&mut Scene<'a>> {
+        match &mut self.active_scene {
+            Some(scene) => Some(scene),
+            None => None,
+        }
     }
 }

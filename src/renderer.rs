@@ -197,26 +197,30 @@ impl Renderer {
                 ]
             ).unwrap();
 
-        let uniform_data = asset_manager.active_camera().as_uniform_data();
+        if let Some(scene) = asset_manager.active_scene() {
+            let mut uniform_data = scene.camera().as_uniform_data();
 
-        for (mesh_name, mesh) in asset_manager.meshes() {
-            debug!("{:?}", mesh_name);
-            self.uniform_manager.update(uniform_data);
-            let uniform_buffer_subbuffer = self.uniform_manager.get_subbuffer_data();
+            for object in scene.objects() {
+                uniform_data.model = object.model_matrix().into();
+                self.uniform_manager.update(uniform_data);
+                let uniform_buffer_subbuffer = self.uniform_manager.get_subbuffer_data();
 
-            let descriptor_set = Arc::new(PersistentDescriptorSet::start(self.pipeline.clone(), 0)
-                .add_buffer(uniform_buffer_subbuffer).unwrap()
-                .build().unwrap()
-            );
+                let descriptor_set = Arc::new(PersistentDescriptorSet::start(self.pipeline.clone(), 0)
+                    .add_buffer(uniform_buffer_subbuffer).unwrap()
+                    .build().unwrap()
+                );
 
-            command_buffer = command_buffer.draw_indexed(
-                self.pipeline.clone(), 
-                &DynamicState::none(), 
-                vec!(mesh.vertex_buffer()),
-                mesh.index_buffer(), 
-                descriptor_set.clone(),
-                (),
-            ).unwrap();
+                if let Some(mesh) = object.mesh() {
+                    command_buffer = command_buffer.draw_indexed(
+                        self.pipeline.clone(), 
+                        &DynamicState::none(), 
+                        vec!(mesh.vertex_buffer()),
+                        mesh.index_buffer(), 
+                        descriptor_set.clone(),
+                        (),
+                    ).unwrap();
+                }
+            }
         }
 
         let command_buffer = command_buffer.end_render_pass().unwrap().build().unwrap();

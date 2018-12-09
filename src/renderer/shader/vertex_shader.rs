@@ -1,4 +1,4 @@
 vulkano_shaders::shader!{
     ty: "vertex",
-    path: "data/shader/vertex_shader.vs",
+    path: "data/shader/vertex_shader.vert",
 }
