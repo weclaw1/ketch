@@ -6,6 +6,8 @@ pub struct Settings {
     dpi: f64,
     near_plane: f32,
     far_plane: f32,
+    grab_cursor: bool,
+    hide_cursor: bool,
 }
 
 impl Settings {
@@ -16,6 +18,8 @@ impl Settings {
             dpi: 1.0,
             near_plane: 0.1,
             far_plane: 1000.0,
+            grab_cursor: true,
+            hide_cursor: true,
         }
     }
 
@@ -53,5 +57,21 @@ impl Settings {
 
     pub fn set_dpi(&mut self, value: f64) {
         self.dpi = value;
-    } 
+    }
+
+    pub fn set_grab_cursor(&mut self, value: bool) {
+        self.grab_cursor = value;
+    }
+
+    pub fn grab_cursor(&self) -> bool {
+        self.grab_cursor
+    }
+
+    pub fn set_hide_cursor(&mut self, value: bool) {
+        self.hide_cursor = value;
+    }
+
+    pub fn hide_cursor(&self) -> bool {
+        self.hide_cursor
+    }
 }

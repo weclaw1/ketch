@@ -72,6 +72,9 @@ impl Renderer {
                                           .build_vk_surface(events_loop, instance.clone())?;
         let window = surface.window();
 
+        window.grab_cursor(settings.borrow().grab_cursor()).unwrap();
+        window.hide_cursor(settings.borrow().hide_cursor());
+
         let physical_queues = queues::find_queues(&physical_device, &surface);
 
         let minimal_features = vulkano::device::Features {

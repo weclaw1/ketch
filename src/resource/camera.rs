@@ -32,7 +32,7 @@ impl Camera {
         let front = Vec3::new(0.0, 0.0, -1.0);
         let up = Vec3::new(0.0, 1.0, 0.0);
         let world_up = up;
-        let mut right = glm::normalize(&glm::cross::<f32, U3>(&front, &world_up));
+        let right = glm::normalize(&glm::cross::<f32, U3>(&front, &world_up));
 
         Camera {
             settings,
@@ -51,7 +51,11 @@ impl Camera {
         self.position
     }
 
-    pub fn set_position(&mut self, position: Vec3) {
+    pub fn set_position(&mut self, x: f32, y: f32, z: f32) {
+        self.position = Vec3::new(x, y, z);
+    }
+
+    pub fn set_position_vec3(&mut self, position: Vec3) {
         self.position = position;
     }
 
