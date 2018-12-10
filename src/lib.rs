@@ -45,6 +45,10 @@ impl<'a, T: InputMapping> Smml<'a, T> {
         self.settings.clone()
     }
 
+    pub fn input_system_mut(&mut self) -> &mut InputSystem<T> {
+        &mut self.input_system
+    }
+
     pub fn run<F: FnMut(&mut Settings, &mut AssetManager, &mut InputSystem<T>, Duration)>(&mut self, mut update: F) {
         let mut previous_time = Instant::now();
         let mut lag = Duration::new(0, 0);

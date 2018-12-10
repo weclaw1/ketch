@@ -16,7 +16,7 @@ pub mod object;
 
 pub struct AssetManager<'a> {
     settings: Rc<RefCell<Settings>>,
-    active_scene: Option<&'a mut Scene<'a>>,
+    active_scene: Option<Scene<'a>>,
 
     scenes: HashMap<String, Scene<'a>>,
     meshes: HashMap<String, Mesh>,
@@ -61,6 +61,14 @@ impl<'a> AssetManager<'a> {
 
     pub fn remove_scene(&mut self, name: &str) -> Option<Scene<'a>> {
         self.scenes.remove(name)
+    }
+
+    pub fn set_active_scene(&mut self, scene: Scene<'a>) {
+        self.active_scene = Some(scene);
+    }
+
+    pub fn take_active_scene(&mut self) -> Option<Scene<'a>> {
+        self.active_scene.take()
     }
 
     pub fn active_scene(&self) -> Option<&Scene<'a>> {

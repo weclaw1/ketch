@@ -12,6 +12,7 @@ const MIN_PITCH: f32 = -89.0;
 const MIN_FOV: f32 = 1.0;
 const MAX_FOV: f32 = 45.0;
 
+#[derive(Clone)]
 pub struct Camera {
     settings: Rc<RefCell<Settings>>,
     position: Vec3,

@@ -1,6 +1,7 @@
 use crate::resource::object::Object;
 use crate::resource::camera::Camera;
 
+#[derive(Clone)]
 pub struct Scene<'a> {
     name: String,
 
