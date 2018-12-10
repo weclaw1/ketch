@@ -2,14 +2,14 @@ use crate::resource::object::Object;
 use crate::resource::camera::Camera;
 
 #[derive(Clone)]
-pub struct Scene<'a> {
+pub struct Scene {
     name: String,
 
     camera: Camera,
-    objects: Vec<Object<'a>>,
+    objects: Vec<Object>,
 }
 
-impl<'a> Scene<'a> {
+impl Scene {
     pub fn new<S: Into<String>>(name: S, camera: Camera) -> Self {
         Scene {
             name: name.into(),
@@ -22,11 +22,11 @@ impl<'a> Scene<'a> {
         &self.name
     }
 
-    pub fn add_object(&mut self, object: Object<'a>) {
+    pub fn add_object(&mut self, object: Object) {
         self.objects.push(object);
     }
 
-    pub fn remove_object(&mut self, id: u32) -> Option<Object<'a>> {
+    pub fn remove_object(&mut self, id: u32) -> Option<Object> {
         let object_index = self.objects.iter().position(|x| x.id() == id);
         match object_index {
             Some(index) => Some(self.objects.remove(index)),
@@ -46,11 +46,11 @@ impl<'a> Scene<'a> {
         }
     }
 
-    pub fn objects(&self) -> &[Object<'a>] {
+    pub fn objects(&self) -> &[Object] {
         self.objects.as_slice()
     }
 
-    pub fn objects_mut(&mut self) -> &mut [Object<'a>] {
+    pub fn objects_mut(&mut self) -> &mut [Object] {
         self.objects.as_mut_slice()
     }
 

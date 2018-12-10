@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use crate::resource::mesh::Mesh;
 use nalgebra_glm::{Mat4, Vec3};
 
@@ -5,7 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
 static ID_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
-pub struct Object<'a> {
+pub struct Object {
     id: u32,
     name: String,
 
@@ -27,11 +28,11 @@ pub struct Object<'a> {
 
     model_matrix: Mat4,
 
-    mesh: Option<&'a Mesh>,
+    mesh: Option<Arc<Mesh>>,
 }
 
 
-impl<'a> Object<'a> {
+impl Object {
     pub fn id(&self) -> u32 {
         self.id
     }
@@ -182,11 +183,14 @@ impl<'a> Object<'a> {
         self.model_matrix
     }
 
-    pub fn mesh(&self) -> Option<&Mesh> {
-        self.mesh
+    pub fn mesh(&self) -> Option<Arc<Mesh>> {
+        match &self.mesh {
+            Some(mesh) => Some(mesh.clone()),
+            None => None,
+        }
     }
 
-    pub fn set_mesh(&mut self, mesh: &'a Mesh) {
+    pub fn set_mesh(&mut self, mesh: Arc<Mesh>) {
         self.mesh = Some(mesh);
     }
 
@@ -207,8 +211,8 @@ impl<'a> Object<'a> {
     }
 }
 
-impl<'a> Clone for Object<'a> {
-    fn clone(&self) -> Object<'a> {
+impl<'a> Clone for Object {
+    fn clone(&self) -> Object {
         Object {
             id: generate_id(),
             name: self.name.clone(),
@@ -231,12 +235,12 @@ impl<'a> Clone for Object<'a> {
 
             model_matrix: self.model_matrix,
 
-            mesh: self.mesh    
+            mesh: self.mesh.clone(),    
         }
     }
 }
 
-pub struct ObjectBuilder<'a> {
+pub struct ObjectBuilder {
     name: String,
 
     position_x: f32,
@@ -255,10 +259,10 @@ pub struct ObjectBuilder<'a> {
     rotation_matrix: Mat4,
     scaling_matrix: Mat4, 
 
-    mesh: Option<&'a Mesh>,
+    mesh: Option<Arc<Mesh>>,
 }
 
-impl<'a> ObjectBuilder<'a> {
+impl ObjectBuilder {
     pub fn new<S: Into<String>>(name: S) -> Self {
         Self {
             name: name.into(),
@@ -283,7 +287,7 @@ impl<'a> ObjectBuilder<'a> {
         }
     }
 
-    pub fn with_mesh(self, mesh: &'a Mesh) -> Self {
+    pub fn with_mesh(self, mesh: Arc<Mesh>) -> Self {
         Self {
             name: self.name,
 
@@ -379,7 +383,7 @@ impl<'a> ObjectBuilder<'a> {
         }
     }
 
-    pub fn build(&self) -> Object<'a> {
+    pub fn build(&self) -> Object {
         Object {
             id: generate_id(),
             name: self.name.clone(),
@@ -402,7 +406,7 @@ impl<'a> ObjectBuilder<'a> {
 
             model_matrix: create_model_matrix(&self.translation_matrix, &self.rotation_matrix, &self.scaling_matrix),
 
-            mesh: self.mesh,  
+            mesh: self.mesh.clone(),  
         }
     }
 }
