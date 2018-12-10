@@ -27,8 +27,7 @@ pub struct Smml<T: InputMapping = NoInputMapping> {
 }
 
 impl<T: InputMapping> Smml<T> {
-    pub fn new() -> Self {
-        let settings = Rc::new(RefCell::new(Settings::new("smml", 800.0, 600.0)));
+    pub fn new(settings: Rc<RefCell<Settings>>) -> Self {
         let input_system = InputSystem::new(settings.clone());
         let renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
         let asset_manager = AssetManager::new(settings.clone(), renderer.get_queues());

@@ -18,8 +18,8 @@ impl Settings {
             dpi: 1.0,
             near_plane: 0.1,
             far_plane: 1000.0,
-            grab_cursor: true,
-            hide_cursor: true,
+            grab_cursor: false,
+            hide_cursor: false,
         }
     }
 
