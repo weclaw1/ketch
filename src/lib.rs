@@ -18,14 +18,14 @@ use log::*;
 
 /// A struct representing the top level of this engine.
 /// It provides access to all the subsystems that can be used.
-pub struct Smml<'a, T: InputMapping = NoInputMapping> {
+pub struct Smml<T: InputMapping = NoInputMapping> {
     renderer: Renderer,
-    asset_manager: AssetManager<'a>,
+    asset_manager: AssetManager,
     input_system: InputSystem<T>,
     settings: Rc<RefCell<Settings>>,
 }
 
-impl<'a, T: InputMapping> Smml<'a, T> {
+impl<T: InputMapping> Smml<T> {
     /// Creates and returns a new instance of this engine.
     pub fn new() -> Self {
         let settings = Rc::new(RefCell::new(Settings::new("smml", 800.0, 600.0)));
@@ -74,7 +74,7 @@ impl<'a, T: InputMapping> Smml<'a, T> {
         }
     }
 
-    pub fn asset_manager(&mut self) -> &mut AssetManager<'a> {
+    pub fn asset_manager_mut(&mut self) -> &mut AssetManager {
         &mut self.asset_manager
     }
 }
