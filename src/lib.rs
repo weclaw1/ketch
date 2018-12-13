@@ -14,10 +14,9 @@ use std::rc::Rc;
 
 use std::time::{Duration, Instant};
 
-const DURATION_PER_UPDATE: Duration = Duration::from_millis(16);
+use log::*;
 
-
-/// A struct representing the top level of this library.
+/// A struct representing the top level of this engine.
 /// It provides access to all the subsystems that can be used.
 pub struct Smml<'a, T: InputMapping = NoInputMapping> {
     renderer: Renderer,
@@ -27,6 +26,7 @@ pub struct Smml<'a, T: InputMapping = NoInputMapping> {
 }
 
 impl<'a, T: InputMapping> Smml<'a, T> {
+    /// Creates and returns a new instance of this engine.
     pub fn new() -> Self {
         let settings = Rc::new(RefCell::new(Settings::new("smml", 800.0, 600.0)));
         let input_system = InputSystem::new(settings.clone());
@@ -41,15 +41,19 @@ impl<'a, T: InputMapping> Smml<'a, T> {
         }
     }
 
+    /// Returns settings used by this engine.
     pub fn settings(&self) -> Rc<RefCell<Settings>> {
         self.settings.clone()
     }
 
+    /// Returns reference to input system, which updates input mapping implemented by the user.
     pub fn input_system_mut(&mut self) -> &mut InputSystem<T> {
         &mut self.input_system
     }
 
     pub fn run<F: FnMut(&mut Settings, &mut AssetManager, &mut InputSystem<T>, Duration)>(&mut self, mut update: F) {
+        let time_per_update = self.settings.borrow().time_per_update();
+
         let mut previous_time = Instant::now();
         let mut lag = Duration::new(0, 0);
 
@@ -60,10 +64,10 @@ impl<'a, T: InputMapping> Smml<'a, T> {
 
             self.input_system.update();
 
-            while lag >= DURATION_PER_UPDATE {
-                update(&mut self.settings.borrow_mut(), &mut self.asset_manager, &mut self.input_system, DURATION_PER_UPDATE);
+            while lag >= time_per_update {
+                update(&mut self.settings.borrow_mut(), &mut self.asset_manager, &mut self.input_system, time_per_update);
 
-                lag -= DURATION_PER_UPDATE;
+                lag -= time_per_update;
             }
 
             self.renderer.render(&mut self.asset_manager);

@@ -1,8 +1,10 @@
+use std::time::Duration;
 use winit::dpi::PhysicalSize;
 
 pub struct Settings {
     window_title: String,
     window_size: PhysicalSize,
+    time_per_update: Duration,
     dpi: f64,
     near_plane: f32,
     far_plane: f32,
@@ -15,11 +17,12 @@ impl Settings {
         Settings {
             window_title: window_title.into(),
             window_size: PhysicalSize::new(scr_width, scr_height),
+            time_per_update: Duration::from_millis(16),
             dpi: 1.0,
             near_plane: 0.1,
             far_plane: 1000.0,
-            grab_cursor: true,
-            hide_cursor: true,
+            grab_cursor: false,
+            hide_cursor: false,
         }
     }
 
@@ -73,5 +76,13 @@ impl Settings {
 
     pub fn hide_cursor(&self) -> bool {
         self.hide_cursor
+    }
+
+    pub fn set_time_per_update(&mut self, value: Duration) {
+        self.time_per_update = value;
+    }
+
+    pub fn time_per_update(&self) -> Duration {
+        self.time_per_update
     }
 }
