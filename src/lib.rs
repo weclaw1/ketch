@@ -11,8 +11,9 @@ use crate::input::{InputSystem, InputMapping};
 
 use std::cell::RefCell;
 use std::rc::Rc;
-
 use std::time::{Duration, Instant};
+
+use fps_counter::FPSCounter;
 
 use log::*;
 
@@ -46,14 +47,18 @@ impl<T: InputMapping> Smml<T> {
         self.settings.clone()
     }
 
-    /// Returns reference to input system, which updates input mapping implemented by the user.
+    /// Returns a reference to input system, which updates input mapping implemented by the user.
     pub fn input_system_mut(&mut self) -> &mut InputSystem<T> {
         &mut self.input_system
     }
 
+    /// Runs the game loop. Takes a closure which updates the game as a parameter.
     pub fn run<F: FnMut(&mut Settings, &mut AssetManager, &mut InputSystem<T>, Duration)>(&mut self, mut update: F) {
+        let mut fps_counter = FPSCounter::new();
+        let log_fps_frequency = self.settings.borrow().log_fps_frequency();
         let time_per_update = self.settings.borrow().time_per_update();
 
+        let mut last_fps_counter_log = Instant::now();
         let mut previous_time = Instant::now();
         let mut lag = Duration::new(0, 0);
 
@@ -71,9 +76,15 @@ impl<T: InputMapping> Smml<T> {
             }
 
             self.renderer.render(&mut self.asset_manager);
+            let fps = fps_counter.tick();
+            if last_fps_counter_log.elapsed() >= log_fps_frequency {
+                info!("Current FPS: {}", fps);
+                last_fps_counter_log = Instant::now();
+            }
         }
     }
 
+    /// Returns a mutable reference to the asset manager.
     pub fn asset_manager_mut(&mut self) -> &mut AssetManager {
         &mut self.asset_manager
     }
