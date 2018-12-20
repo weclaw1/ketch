@@ -3,6 +3,7 @@ use winit::dpi::LogicalPosition;
 use winit::WindowEvent;
 use winit::DeviceEvent;
 
+/// Enum containing input events
 pub enum InputEvent {
     KeyboardInput(KeyboardInput),
     CursorMoved (LogicalPosition),
@@ -13,6 +14,7 @@ pub enum InputEvent {
     Button { button: ButtonId, state: ElementState },
 }
 
+/// Changes winit Events InputEvents
 pub fn to_input_event(event: Event) -> Option<InputEvent> {
     match event {
         Event::WindowEvent { event, .. } => match event {

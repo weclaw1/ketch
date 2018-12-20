@@ -6,6 +6,7 @@ use winit::Window;
 use log::*;
 use std::sync::Arc;
 
+/// Struct with vulkan queues.
 #[derive(Clone)]
 pub struct Queues {
     graphics_queue: Arc<Queue>,
@@ -14,6 +15,7 @@ pub struct Queues {
 }
 
 impl Queues {
+    /// Creates new struct with vulkan queues.
     pub fn new(queues: QueuesIter) -> Self {
         let mut graphic_queue = None;
         let mut compute_queue = None;
@@ -61,19 +63,23 @@ impl Queues {
         }
     }
 
+    /// Returns graphics queue.
     pub fn graphics_queue(&self) -> Arc<Queue> {
         self.graphics_queue.clone()
     }
 
+    /// Returns compute queue. Can be the same as graphics queue if one is not found.
     pub fn compute_queue(&self) -> Arc<Queue> {
         self.compute_queue.clone()
     }
 
+    /// Returns transfer queue. Currently always is the same as compute queue since multi queue sync is not implemented for vulkano at the moment.
     pub fn transfer_queue(&self) -> Arc<Queue> {
         self.transfer_queue.clone()
     }
 }
 
+/// Finds available queues supported by the physical device.
 pub fn find_queues<'a>(physical_device: &PhysicalDevice<'a>, surface: &Surface<Window>) -> Vec<(QueueFamily<'a>, f32)>{
     
     let mut queue_collection = Vec::new();

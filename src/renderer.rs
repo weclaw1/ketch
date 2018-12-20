@@ -16,10 +16,9 @@ use vulkano::device::{Device};
 use vulkano::pipeline::{GraphicsPipeline, GraphicsPipelineAbstract};
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::image::SwapchainImage;
-use vulkano::swapchain::{Surface, PresentMode, Swapchain, SurfaceTransform, CompositeAlpha, SwapchainCreationError};
+use vulkano::swapchain::{Surface, PresentMode, Swapchain, SurfaceTransform, CompositeAlpha};
 use vulkano::single_pass_renderpass;
 use vulkano::framebuffer::{RenderPassAbstract, Framebuffer, FramebufferAbstract, Subpass};
-use winit::dpi::LogicalSize;
 use winit::{EventsLoop, WindowBuilder, Window};
 use vulkano::sync::GpuFuture;
 use vulkano::sync;
@@ -34,6 +33,7 @@ use crate::renderer::queues::{find_queues, Queues};
 use crate::renderer::uniform_manager::UniformManager;
 use crate::renderer::shader::ShaderSet;
 
+/// Top level struct of vulkan renderer.
 pub struct Renderer {
     settings: Rc<RefCell<Settings>>,
     instance: Arc<Instance>,
@@ -53,6 +53,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
+    /// Creates new renderer.
     pub fn new(settings: Rc<RefCell<Settings>>, events_loop: &EventsLoop) -> Result<Self, RendererCreationError> {
         let instance = {
             let extensions = vulkano_win::required_extensions();
