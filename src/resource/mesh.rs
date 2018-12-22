@@ -15,6 +15,7 @@ pub struct Vertex {
 
 impl_vertex!(Vertex, position, color);
 
+/// Mesh is a collection of vertices, edges and faces that defines shape of object.
 pub struct Mesh {
     name: String,
 
@@ -26,6 +27,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
+    /// Creates new mesh.
     pub fn new<S: Into<String>>(name: S, vertices: Vec<Vertex>, indices: Vec<u32>, upload_queue: Arc<Queue>) -> Self {
         let (vertex_buffer, _buffer_future) = ImmutableBuffer::from_iter(
             vertices.iter().cloned(),
@@ -50,14 +52,17 @@ impl Mesh {
         }
     }
 
+    /// Returns the name of this mesh.
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Returns the vertex buffer of this mesh.
     pub fn vertex_buffer(&self) -> Arc<ImmutableBuffer<[Vertex]>> {
         self.vertex_buffer.clone()
     }
 
+    /// Returns the index buffer of this mesh.
     pub fn index_buffer(&self) -> Arc<ImmutableBuffer<[u32]>> {
         self.index_buffer.clone()
     }

@@ -80,7 +80,7 @@ impl Queues {
 }
 
 /// Finds available queues supported by the physical device.
-pub fn find_queues<'a>(physical_device: &PhysicalDevice<'a>, surface: &Surface<Window>) -> Vec<(QueueFamily<'a>, f32)>{
+pub fn find_queues<'a>(physical_device: PhysicalDevice<'a>, surface: &Surface<Window>) -> Vec<(QueueFamily<'a>, f32)>{
     
     let mut queue_collection = Vec::new();
 

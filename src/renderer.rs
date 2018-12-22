@@ -1,7 +1,18 @@
 pub mod queues;
 mod uniform_manager;
 pub mod shader;
+pub mod renderer_error;
 
+use vulkano::command_buffer::AutoCommandBuffer;
+use crate::renderer::renderer_error::RenderError;
+use vulkano::framebuffer::FramebufferCreationError;
+use vulkano::pipeline::GraphicsPipelineCreationError;
+use crate::renderer::renderer_error::RendererCreationError;
+use vulkano::format::Format;
+use vulkano::framebuffer::RenderPassCreationError;
+use vulkano::device::DeviceCreationError;
+use vulkano::device::QueuesIter;
+use vulkano::instance::QueueFamily;
 use crate::resource::AssetManager;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -25,11 +36,11 @@ use vulkano::sync;
 use vulkano::swapchain::{AcquireError};
 use vulkano::swapchain;
 
-use vulkano_win::{VkSurfaceBuild, CreationError as WindowCreationError};
+use vulkano_win::VkSurfaceBuild;
 
 use std::sync::Arc;
 
-use crate::renderer::queues::{find_queues, Queues};
+use crate::renderer::queues::Queues;
 use crate::renderer::uniform_manager::UniformManager;
 use crate::renderer::shader::ShaderSet;
 
@@ -55,18 +66,10 @@ pub struct Renderer {
 impl Renderer {
     /// Creates new renderer.
     pub fn new(settings: Rc<RefCell<Settings>>, events_loop: &EventsLoop) -> Result<Self, RendererCreationError> {
-        let instance = {
-            let extensions = vulkano_win::required_extensions();
-            Instance::new(None, &extensions, None)
-        }?;
+        let instance = create_new_instance()?;
 
-        let physical_device = match rank_devices(PhysicalDevice::enumerate(&instance)) {
-            Some(device) => {
-                info!("Using device: {} (type: {:?})", device.name(), device.ty());
-                device
-            },
-            None => panic!("Couldn't find physical device!")
-        };
+        let physical_device = rank_devices(PhysicalDevice::enumerate(&instance))?;
+        info!("Using device: {} (type: {:?})", physical_device.name(), physical_device.ty());
 
         let surface = WindowBuilder::new().with_title(settings.borrow().window_title())
                                           .with_dimensions(settings.borrow().window_size().to_logical(settings.borrow().dpi()))
@@ -76,85 +79,21 @@ impl Renderer {
         window.grab_cursor(settings.borrow().grab_cursor()).unwrap();
         window.hide_cursor(settings.borrow().hide_cursor());
 
-        let physical_queues = queues::find_queues(&physical_device, &surface);
+        let physical_queues = queues::find_queues(physical_device, &surface);
 
-        let minimal_features = vulkano::device::Features {
-            depth_clamp: true, //needed for correct shadow mapping
-            .. vulkano::device::Features::none()
-        };
-
-        let device_extensions_needed = vulkano::device::DeviceExtensions {
-            khr_swapchain: true,
-            .. vulkano::device::DeviceExtensions::none()
-        };
-
-        let (device, mut queues) = Device::new(
-            physical_device, &minimal_features,
-            &device_extensions_needed, physical_queues.iter().cloned()
-        ).expect("failed to create device");
+        let (device, queues) = create_logical_device(physical_device, &physical_queues)?;
 
         let queues = Queues::new(queues);
 
-        let (swapchain, images) = {
-
-            let capabilities = surface.capabilities(physical_device).expect("failed to get surface capabilities");
-            let usage = capabilities.supported_usage_flags;
-            let format = capabilities.supported_formats[0].0;
-
-            let initial_dimensions = get_window_dimensions(settings.clone(), window);
-
-            let present_mode = {
-                if capabilities.present_modes.mailbox {
-                    info!("Using Mailbox presentation mode");
-                    PresentMode::Mailbox
-                } else {
-                    info!("Using Fifo presentation mode");
-                    PresentMode::Fifo
-                }
-            };
-
-            Swapchain::new(
-                device.clone(),
-                surface.clone(),
-                capabilities.min_image_count,
-                format,
-                initial_dimensions,
-                1,
-                usage,
-                &queues.graphics_queue(),
-                SurfaceTransform::Identity,
-                CompositeAlpha::Opaque,
-                present_mode,
-                true,
-                None
-            )
-            .expect("failed to create swapchain")
-
-        };
+        let (swapchain, images) = create_swapchain(settings.clone(), surface.clone(), physical_device, device.clone(), &queues)?;
 
         let uniform_manager = UniformManager::new(device.clone());
-
         let shader_set = Rc::new(ShaderSet::load(device.clone()));
 
-        let render_pass = Arc::new(
-            single_pass_renderpass!(device.clone(),
-                attachments: {
-                    color: {
-                        load: Clear,
-                        store: Store,
-                        format: swapchain.format(),
-                        samples: 1,
-                    }
-                },
-                pass: {
-                    color: [color],
-                    depth_stencil: {}
-                }
-            ).expect("Couldn't create render pass")
-        );
+        let render_pass = create_renderpass(device.clone(), swapchain.format())?;
 
-        let pipeline = create_pipeline(device.clone(), shader_set.clone(), &images, render_pass.clone());
-        let framebuffers = create_framebuffers(device.clone(), &images, render_pass.clone());
+        let pipeline = create_pipeline(device.clone(), shader_set.clone(), &images, render_pass.clone())?;
+        let framebuffers = create_framebuffers(&images, render_pass.clone())?;
 
         Ok(Renderer {
             settings,
@@ -174,32 +113,58 @@ impl Renderer {
         })
     }
 
-    pub fn render(&mut self, asset_manager: &mut AssetManager) {
+    /// Renders one frame using active scene from asset manager.
+    pub fn render(&mut self, asset_manager: &mut AssetManager) -> Result<(), RenderError> {
         if let Some(previous_frame) = &mut self.previous_frame {
             previous_frame.cleanup_finished();
         }
 
         if self.recreate_swapchain {
-            self.recreate_swapchain();
+            self.recreate_swapchain()?;
         }
 
         let (image_num, acquire_future) = match swapchain::acquire_next_image(self.swapchain.clone(), None) {
             Ok(r) => r,
             Err(AcquireError::OutOfDate) => {
                 self.recreate_swapchain = true;
-                return;
-            }
-            Err(err) => panic!("{:?}", err)
+                return Err(RenderError::AcquireError(AcquireError::OutOfDate))
+            },
+            Err(err) => return Err(RenderError::AcquireError(err)),
         };
 
+        let command_buffer = self.create_command_buffer(image_num, asset_manager)?;
 
-        let mut command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queues.graphics_queue().family()).unwrap()
+        let future = self.previous_frame.take()
+                                        .unwrap_or_else(|| Box::new(sync::now(self.device.clone())) as Box<_>)
+                                        .join(acquire_future)
+                                        .then_execute(self.queues.graphics_queue(), command_buffer)?
+                                        .then_swapchain_present(self.queues.graphics_queue(), self.swapchain.clone(), image_num)
+                                        .then_signal_fence_and_flush();
+
+        match future {
+            Ok(future) => {
+                self.previous_frame = Some(Box::new(future) as Box<_>);
+                Ok(())
+            }
+            Err(sync::FlushError::OutOfDate) => {
+                self.recreate_swapchain = true;
+                return Err(RenderError::FlushError(sync::FlushError::OutOfDate))
+            }
+            Err(e) => {
+                return Err(RenderError::FlushError(e))
+            }
+        }   
+    }
+
+    /// Creates command buffer using active scene in asset manager
+    fn create_command_buffer(&mut self, image_num: usize, asset_manager: &mut AssetManager) -> Result<AutoCommandBuffer, RenderError> {
+        let mut command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queues.graphics_queue().family())?
             .begin_render_pass(
                 self.framebuffers[image_num].clone(), false,
                 vec![
                     [0.0, 0.0, 0.0, 1.0].into(),
                 ]
-            ).unwrap();
+            )?;
 
         if let Some(scene) = asset_manager.active_scene() {
             let mut uniform_data = scene.camera().as_uniform_data();
@@ -207,11 +172,11 @@ impl Renderer {
             for object in scene.objects() {
                 uniform_data.model = object.model_matrix().into();
                 self.uniform_manager.update(uniform_data);
-                let uniform_buffer_subbuffer = self.uniform_manager.get_subbuffer_data();
+                let uniform_buffer_subbuffer = self.uniform_manager.get_subbuffer_data()?;
 
                 let descriptor_set = Arc::new(PersistentDescriptorSet::start(self.pipeline.clone(), 0)
-                    .add_buffer(uniform_buffer_subbuffer).unwrap()
-                    .build().unwrap()
+                    .add_buffer(uniform_buffer_subbuffer)?
+                    .build()?
                 );
 
                 if let Some(mesh) = object.mesh() {
@@ -222,85 +187,66 @@ impl Renderer {
                         mesh.index_buffer(), 
                         descriptor_set.clone(),
                         (),
-                    ).unwrap();
+                    )?;
                 }
             }
         }
 
-        let command_buffer = command_buffer.end_render_pass().unwrap().build().unwrap();
-
-        let future = self.previous_frame.take()
-                                        .unwrap_or_else(|| Box::new(sync::now(self.device.clone())) as Box<_>)
-                                        .join(acquire_future)
-                                        .then_execute(self.queues.graphics_queue(), command_buffer).unwrap()
-                                        .then_swapchain_present(self.queues.graphics_queue(), self.swapchain.clone(), image_num)
-                                        .then_signal_fence_and_flush();
-
-        match future {
-            Ok(future) => {
-                self.previous_frame = Some(Box::new(future) as Box<_>);
-            }
-            Err(sync::FlushError::OutOfDate) => {
-                self.recreate_swapchain = true;
-            }
-            Err(e) => {
-                error!("{:?}", e);
-            }
-        }   
+        Ok(command_buffer.end_render_pass()?.build()?)
     }
 
-    fn recreate_swapchain(&mut self) {
+    /// Recreates swapchain when surface changed
+    fn recreate_swapchain(&mut self) -> Result<(), RenderError>{
         let window_dimensions = get_window_dimensions(self.settings.clone(), self.surface.window());
 
-        let (new_swapchain, new_images) = match self.swapchain.recreate_with_dimension(window_dimensions) {
-            Ok(r) => r,
-            Err(err) => panic!("{:?}", err)
-        };
+        let (new_swapchain, new_images) = self.swapchain.recreate_with_dimension(window_dimensions)?;
 
         self.swapchain = new_swapchain;
         self.images = new_images;
 
-        self.pipeline = create_pipeline(self.device.clone(), self.shader_set.clone(), &self.images, self.render_pass.clone());
-        self.framebuffers = create_framebuffers(self.device.clone(), &self.images, self.render_pass.clone());
+        self.pipeline = create_pipeline(self.device.clone(), self.shader_set.clone(), &self.images, self.render_pass.clone())?;
+        self.framebuffers = create_framebuffers(&self.images, self.render_pass.clone())?;
 
         self.recreate_swapchain = false;
+        Ok(())
     }
 
+    /// Returns vulkan queues
     pub fn get_queues(&self) -> Queues {
         self.queues.clone()
     }
 
 }
 
+/// Creates framebuffers, which contain list of images that are attached.
 fn create_framebuffers(
-    device: Arc<Device>, 
     images: &[Arc<SwapchainImage<Window>>], 
     render_pass: Arc<RenderPassAbstract + Send + Sync>
-) -> Vec<Arc<FramebufferAbstract + Send + Sync>> {
-    
-    let dimensions = images[0].dimensions();
+) -> Result<Vec<Arc<FramebufferAbstract + Send + Sync>>, FramebufferCreationError> {
 
-    let framebuffers = images.iter().map(|image| {
-        Arc::new(
-            Framebuffer::start(render_pass.clone())
-                        .add(image.clone()).unwrap()
-                        .build().unwrap()
-        ) as Arc<FramebufferAbstract + Send + Sync>}
-    ).collect::<Vec<_>>();
+    let mut framebuffers = Vec::with_capacity(images.len());
 
-    framebuffers
+    for image in images {
+        let framebuffer = Framebuffer::start(render_pass.clone())
+                                                        .add(image.clone())?
+                                                        .build()?;
+        framebuffers.push(Arc::new(framebuffer) as Arc<FramebufferAbstract + Send + Sync>);
+    }
+
+    Ok(framebuffers)
 }
 
+/// Creates a pipeline, which describe a graphical or computer operation.
 fn create_pipeline(
     device: Arc<Device>, 
     shader_set: Rc<ShaderSet>, 
     images: &[Arc<SwapchainImage<Window>>], 
     render_pass: Arc<RenderPassAbstract + Send + Sync>
-) -> Arc<GraphicsPipelineAbstract + Send + Sync> {
+) -> Result<Arc<GraphicsPipelineAbstract + Send + Sync>, GraphicsPipelineCreationError> {
     
     let dimensions = images[0].dimensions();
 
-    let pipeline = Arc::new(GraphicsPipeline::start()
+    let pipeline = GraphicsPipeline::start()
         .vertex_input(ShaderSet::vertex_layout())
         .vertex_shader(shader_set.vertex_shader().main_entry_point(), ())
         .triangle_list()
@@ -312,13 +258,13 @@ fn create_pipeline(
         }))
         .fragment_shader(shader_set.fragment_shader().main_entry_point(), ())
         .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
-        .build(device.clone())
-        .unwrap());
+        .build(device.clone())?;
 
-    pipeline
+    Ok(Arc::new(pipeline))
 }
 
-fn rank_devices(devices: PhysicalDevicesIter) -> Option<PhysicalDevice> {
+/// Finds the best graphical device to render to.
+fn rank_devices(devices: PhysicalDevicesIter) -> Result<PhysicalDevice, RendererCreationError> {
     devices.into_iter().map(|device|
         match device.ty() {
             PhysicalDeviceType::DiscreteGpu => (device, 4),
@@ -327,9 +273,10 @@ fn rank_devices(devices: PhysicalDevicesIter) -> Option<PhysicalDevice> {
             PhysicalDeviceType::Cpu => (device, 1),
             PhysicalDeviceType::Other => (device, 0),
         }
-    ).max_by(|x, y| x.1.cmp(&y.1)).map(|(device, _)| device)
+    ).max_by(|x, y| x.1.cmp(&y.1)).map(|(device, _)| device).ok_or(RendererCreationError::NoPhysicalDeviceError)
 }
 
+/// Returns and updates current window dimensions.
 fn get_window_dimensions(settings: Rc<RefCell<Settings>>, window: &Window) -> [u32; 2] {
     let dimensions = if let Some(dimensions) = window.get_inner_size() {
         let dimensions = dimensions.to_physical(settings.borrow().dpi());
@@ -343,45 +290,83 @@ fn get_window_dimensions(settings: Rc<RefCell<Settings>>, window: &Window) -> [u
     dimensions
 }
 
-#[derive(Debug)]
-pub enum RendererCreationError {
-    InstanceCreationError(InstanceCreationError),
-    WindowCreationError(WindowCreationError),
-} 
-
-impl std::fmt::Display for RendererCreationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            RendererCreationError::InstanceCreationError(e) => e.fmt(f),
-            RendererCreationError::WindowCreationError(e) => e.fmt(f),
-        }
-    }
+/// Creates new vulkan instance
+fn create_new_instance() -> Result<Arc<Instance>, InstanceCreationError> {
+    let extensions = vulkano_win::required_extensions();
+    Instance::new(None, &extensions, None)
 }
 
-impl std::error::Error for RendererCreationError {
-    fn description(&self) -> &str {
-        match self {
-            RendererCreationError::InstanceCreationError(e) => e.description(),
-            RendererCreationError::WindowCreationError(e) => e.description(),
-        }
-    }
+/// Creates new vulkan logical device
+fn create_logical_device<'a>(physical_device: PhysicalDevice, physical_queues: &[(QueueFamily<'a>, f32)]) 
+        -> Result<(Arc<Device>, QueuesIter), DeviceCreationError> {
+    let minimal_features = vulkano::device::Features {
+        depth_clamp: true, //needed for correct shadow mapping
+        .. vulkano::device::Features::none()
+    };
 
-    fn cause(&self) -> Option<&std::error::Error> {
-        match self {
-            RendererCreationError::InstanceCreationError(e) => Some(e),
-            RendererCreationError::WindowCreationError(e) => Some(e),
-        }
-    }
+    let device_extensions_needed = vulkano::device::DeviceExtensions {
+        khr_swapchain: true,
+        .. vulkano::device::DeviceExtensions::none()
+    };
+
+    Device::new(
+        physical_device, &minimal_features,
+        &device_extensions_needed, physical_queues.iter().cloned()
+    )
 }
 
-impl From<InstanceCreationError> for RendererCreationError {
-    fn from(err: InstanceCreationError) -> RendererCreationError {
-        RendererCreationError::InstanceCreationError(err)
-    }
+/// Creates a swapchain, which is a collection of images that are presented to the screen.
+fn create_swapchain<'a>(settings: Rc<RefCell<Settings>>, surface: Arc<Surface<Window>>, physical_device: PhysicalDevice<'a>,
+                        device: Arc<Device>, queues: &Queues) 
+        -> Result<(Arc<Swapchain<Window>>, Vec<Arc<SwapchainImage<Window>>>), RendererCreationError> {
+    let capabilities = surface.capabilities(physical_device)?;
+    let usage = capabilities.supported_usage_flags;
+    let format = capabilities.supported_formats[0].0;
+
+    let initial_dimensions = get_window_dimensions(settings, surface.window());
+
+    let present_mode = {
+        if capabilities.present_modes.mailbox {
+            info!("Using Mailbox presentation mode");
+            PresentMode::Mailbox
+        } else {
+            info!("Using Fifo presentation mode");
+            PresentMode::Fifo
+        }
+    };
+
+    Swapchain::new(
+        device.clone(),
+        surface.clone(),
+        capabilities.min_image_count,
+        format,
+        initial_dimensions,
+        1,
+        usage,
+        &queues.graphics_queue(),
+        SurfaceTransform::Identity,
+        CompositeAlpha::Opaque,
+        present_mode,
+        true,
+        None
+    ).map_err(RendererCreationError::from)
 }
 
-impl From<WindowCreationError> for RendererCreationError {
-    fn from(err: WindowCreationError) -> RendererCreationError {
-        RendererCreationError::WindowCreationError(err)
-    }
+/// Creates render pass, which is a collection of attachments, subpasses, and dependencies between the subpasses.
+fn create_renderpass(device: Arc<Device>, format: Format) -> Result<Arc<RenderPassAbstract + Send + Sync>, RenderPassCreationError> {
+    let render_pass = single_pass_renderpass!(device.clone(),
+                            attachments: {
+                                color: {
+                                    load: Clear,
+                                    store: Store,
+                                    format: format,
+                                    samples: 1,
+                                }
+                            },
+                            pass: {
+                                color: [color],
+                                depth_stencil: {}
+                            }
+                      )?;
+    Ok(Arc::new(render_pass))
 }

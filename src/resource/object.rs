@@ -4,8 +4,10 @@ use nalgebra_glm::{Mat4, Vec3};
 
 use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 
+/// Counter used to assign every object a unique id.
 static ID_COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
 
+/// Objects are entities in the scene.
 pub struct Object {
     id: u32,
     name: String,
@@ -33,36 +35,43 @@ pub struct Object {
 
 
 impl Object {
+    /// Returns object id. Every id is unique.
     pub fn id(&self) -> u32 {
         self.id
     }
 
+    /// Returns object name. Multiple objects can have the same name.
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Sets object name. Multiple objects can have the same name.
     pub fn set_name<S: Into<String>>(&mut self, name: S) {
         self.name = name.into();
     }
 
+    /// Sets object x position.
     pub fn set_position_x(&mut self, position_x: f32) {
         self.position_x = position_x;
         self.update_translation_matrix();
         self.update_model_matrix();
     }
 
+    /// Sets object y position.
     pub fn set_position_y(&mut self, position_y: f32) {
         self.position_y = position_y;
         self.update_translation_matrix();
         self.update_model_matrix();
     }
 
+    /// Sets object z position.
     pub fn set_position_z(&mut self, position_z: f32) {
         self.position_z = position_z;
         self.update_translation_matrix();
         self.update_model_matrix();
     }
 
+    /// Sets object x, y and z position.
     pub fn set_position(&mut self, position_x: f32, position_y: f32, position_z: f32) {
         self.position_x = position_x;
         self.position_y = position_y;
@@ -71,24 +80,28 @@ impl Object {
         self.update_model_matrix();
     }
 
+    /// Sets object x rotation angle.
     pub fn set_rotation_angle_x(&mut self, rotation_angle_x: f32) {
         self.rotation_angle_x = rotation_angle_x;
         self.update_rotation_matrix();
         self.update_model_matrix();
     }
 
+    /// Sets object y rotation angle.
     pub fn set_rotation_angle_y(&mut self, rotation_angle_y: f32) {
         self.rotation_angle_y = rotation_angle_y;
         self.update_rotation_matrix();
         self.update_model_matrix();
     }
 
+    /// Sets object z rotation angle.
     pub fn set_rotation_angle_z(&mut self, rotation_angle_z: f32) {
         self.rotation_angle_z = rotation_angle_z;
         self.update_rotation_matrix();
         self.update_model_matrix();
     }
 
+    /// Sets object x, y and z rotation angle.
     pub fn set_rotation_angles(&mut self, rotation_angle_x: f32, rotation_angle_y: f32, rotation_angle_z: f32) {
         self.rotation_angle_x = rotation_angle_x;
         self.rotation_angle_y = rotation_angle_y;
@@ -97,24 +110,28 @@ impl Object {
         self.update_model_matrix();
     }
 
+    /// Sets object x scale.
     pub fn set_scale_x(&mut self, scale_x: f32) {
         self.scale_x = scale_x;
         self.update_scaling_matrix();
         self.update_model_matrix();
     }
 
+    /// Sets object y scale.
     pub fn set_scale_y(&mut self, scale_y: f32) {
         self.scale_y = scale_y;
         self.update_scaling_matrix();
         self.update_model_matrix();
     }
 
+    /// Sets object z scale.
     pub fn set_scale_z(&mut self, scale_z: f32) {
         self.scale_z = scale_z;
         self.update_scaling_matrix();
         self.update_model_matrix();
     }
 
+    /// Sets object scale. With this function x, y and z is scaled by the same amount.
     pub fn set_scale(&mut self, scale: f32) {
         self.scale_x = scale;
         self.scale_y = scale;
@@ -123,6 +140,7 @@ impl Object {
         self.update_model_matrix();
     }
 
+    /// Sets object x, y and z scale.
     pub fn set_scale_xyz(&mut self, scale_x: f32, scale_y: f32, scale_z: f32) {
         self.scale_x = scale_x;
         self.scale_y = scale_y;
@@ -131,58 +149,72 @@ impl Object {
         self.update_model_matrix();
     }
 
+    /// Returns object x position.
     pub fn position_x(&self) -> f32 {
         self.position_x
     }
 
+    /// Returns object y position.
     pub fn position_y(&self) -> f32 {
         self.position_y
     }
 
+    /// Returns object z position.
     pub fn position_z(&self) -> f32 {
         self.position_z
     }
 
+    /// Returns object x, y and z position.
     pub fn position(&self) -> (f32, f32, f32) {
         (self.position_x, self.position_y, self.position_z)
     }
 
+    /// Returns object x rotation angle.
     pub fn rotation_angle_x(&self) -> f32 {
         self.rotation_angle_x
     }
 
+    /// Returns object y rotation angle.
     pub fn rotation_angle_y(&self) -> f32 {
         self.rotation_angle_y
     }
 
+    /// Returns object z rotation angle.
     pub fn rotation_angle_z(&self) -> f32 {
         self.rotation_angle_z
     }
 
+    /// Returns object x, y and z rotation angle.
     pub fn rotation_angles(&self) -> (f32, f32, f32) {
         (self.rotation_angle_x, self.rotation_angle_y, self.rotation_angle_z)
     }
 
+    /// Returns object x scale.
     pub fn scale_x(&self) -> f32 {
         self.scale_x
     }
 
+    /// Returns object y scale.
     pub fn scale_y(&self) -> f32 {
         self.scale_y
     }
 
+    /// Returns object z scale.
     pub fn scale_z(&self) -> f32 {
         self.scale_z
     }
 
+    /// Returns object x, y and z scale.
     pub fn scale(&self) -> (f32, f32, f32) {
         (self.scale_x, self.scale_y, self.scale_z)
     }
 
+    /// Returns model matrix.
     pub fn model_matrix(&self) -> Mat4 {
         self.model_matrix
     }
 
+    /// Returns object Mesh if set or None if it doesn't have one.
     pub fn mesh(&self) -> Option<Arc<Mesh>> {
         match &self.mesh {
             Some(mesh) => Some(mesh.clone()),
@@ -190,6 +222,7 @@ impl Object {
         }
     }
 
+    /// Sets object mesh.
     pub fn set_mesh(&mut self, mesh: Arc<Mesh>) {
         self.mesh = Some(mesh);
     }
@@ -240,6 +273,7 @@ impl<'a> Clone for Object {
     }
 }
 
+/// Builder used for constructing new objects.
 pub struct ObjectBuilder {
     name: String,
 
@@ -431,6 +465,7 @@ fn create_model_matrix(translation_matrix: &Mat4, rotation_matrix: &Mat4, scalin
     translation_matrix * rotation_matrix * scaling_matrix
 }
 
+/// Generates new unique id.
 fn generate_id() -> u32 {
     let id = ID_COUNTER.fetch_add(1, Ordering::SeqCst) + 1;
     id as u32

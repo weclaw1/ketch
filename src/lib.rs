@@ -31,7 +31,13 @@ impl<T: InputMapping> Smml<T> {
     pub fn new() -> Self {
         let settings = Rc::new(RefCell::new(Settings::new("smml", 800.0, 600.0)));
         let input_system = InputSystem::new(settings.clone());
-        let renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
+        let renderer = match Renderer::new(settings.clone(), input_system.events_loop()) {
+            Ok(renderer) => renderer,
+            Err(e) => {
+                error!("{}", e);
+                panic!("Couldn't create renderer!");
+            },
+        };
         let asset_manager = AssetManager::new(settings.clone(), renderer.get_queues());
         
         Smml {
@@ -75,11 +81,15 @@ impl<T: InputMapping> Smml<T> {
                 lag -= time_per_update;
             }
 
-            self.renderer.render(&mut self.asset_manager);
-            let fps = fps_counter.tick();
-            if last_fps_counter_log.elapsed() >= log_fps_frequency {
-                info!("Current FPS: {}", fps);
-                last_fps_counter_log = Instant::now();
+            match self.renderer.render(&mut self.asset_manager) {
+                Ok(()) => {
+                    let fps = fps_counter.tick();
+                    if last_fps_counter_log.elapsed() >= log_fps_frequency {
+                        info!("Current FPS: {}", fps);
+                        last_fps_counter_log = Instant::now();
+                    }
+                },
+                Err(err) => error!("Couldn't render frame: {}", err),
             }
         }
     }

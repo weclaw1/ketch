@@ -1,7 +1,7 @@
-use winit::{Event, KeyboardInput, MouseScrollDelta, ElementState, MouseButton, AxisId, ButtonId};
-use winit::dpi::LogicalPosition;
-use winit::WindowEvent;
-use winit::DeviceEvent;
+pub use winit::{Event, KeyboardInput, MouseScrollDelta, ElementState, MouseButton, AxisId, ButtonId};
+pub use winit::dpi::LogicalPosition;
+pub use winit::WindowEvent;
+pub use winit::DeviceEvent;
 
 /// Enum containing input events
 pub enum InputEvent {

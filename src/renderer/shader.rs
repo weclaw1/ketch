@@ -18,8 +18,8 @@ impl ShaderSet {
     /// Loads shaders.
     pub fn load(device: Arc<Device>) -> Self {
 
-        let v_s = vertex_shader::Shader::load(device.clone()).expect("failed to load vertex shader!");
-        let f_s = fragment_shader::Shader::load(device.clone()).expect("failed to load vertex shader!");
+        let v_s = vertex_shader::Shader::load(device.clone()).expect("Failed to load vertex shader!");
+        let f_s = fragment_shader::Shader::load(device.clone()).expect("Failed to load fragment shader!");
 
         ShaderSet {
             vertex_shader: v_s,
