@@ -1,4 +1,4 @@
-pub use winit::{Event, KeyboardInput, MouseScrollDelta, ElementState, MouseButton, AxisId, ButtonId};
+pub use winit::{Event, KeyboardInput, MouseScrollDelta, ElementState, MouseButton, AxisId, ButtonId, VirtualKeyCode};
 pub use winit::dpi::LogicalPosition;
 pub use winit::WindowEvent;
 pub use winit::DeviceEvent;
