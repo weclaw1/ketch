@@ -178,12 +178,16 @@ impl Renderer {
                                                              .add_buffer(uniform_buffer_subbuffer)?;
                     
                 if let Some(mesh) = object.mesh() {
-                    let descriptor_set = descriptor_set.add_sampled_image(mesh.texture().image_buffer(), mesh.texture().sampler())?.build()?;
+                    let (mesh_texture, vertex_buffer, index_buffer) = {
+                        let mesh = mesh.read().unwrap();
+                        (mesh.texture(), mesh.vertex_buffer(), mesh.index_buffer())
+                    };
+                    let descriptor_set = descriptor_set.add_sampled_image(mesh_texture.image_buffer(), mesh_texture.sampler())?.build()?;
                     command_buffer = command_buffer.draw_indexed(
                         self.pipeline.clone(), 
                         &DynamicState::none(), 
-                        vec!(mesh.vertex_buffer()),
-                        mesh.index_buffer(), 
+                        vec!(vertex_buffer),
+                        index_buffer, 
                         descriptor_set,
                         (),
                     )?;

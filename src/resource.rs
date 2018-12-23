@@ -1,3 +1,4 @@
+use std::sync::RwLock;
 use image::RgbaImage;
 use std::path::Path;
 use vulkano::device::Device;
@@ -28,7 +29,7 @@ pub struct AssetManager {
     active_scene: Option<Scene>,
 
     scenes: HashMap<String, Scene>,
-    meshes: HashMap<String, Arc<Mesh>>,
+    meshes: HashMap<String, Arc<RwLock<Mesh>>>,
     textures: HashMap<String, Arc<Texture>>,
 
     device: Arc<Device>,
@@ -54,18 +55,19 @@ impl AssetManager {
     }
 
     /// Creates a new mesh.
-    pub fn create_mesh<S: Into<String>>(&self, name: S, vertices: Vec<Vertex>, indices: Vec<u32>) -> Arc<Mesh> {
-        Arc::new(Mesh::new(name, vertices, indices, self.textures.get(DEFAULT_TEXTURE_NAME).unwrap().clone(), self.queues.graphics_queue()))
+    pub fn create_mesh<S: Into<String>>(&self, name: S, vertices: Vec<Vertex>, indices: Vec<u32>) -> Arc<RwLock<Mesh>> {
+        Arc::new(RwLock::new(Mesh::new(name, vertices, indices, self.textures.get(DEFAULT_TEXTURE_NAME).unwrap().clone(), self.queues.graphics_queue())))
     }
 
     /// Adds mesh to asset manager. Meshes need to have unique name. 
     /// If two meshes have the same name, the old mesh will be replaced with the new one.
-    pub fn add_mesh(&mut self, mesh: Arc<Mesh>) {
-        self.meshes.insert(mesh.name().to_string(), mesh);
+    pub fn add_mesh(&mut self, mesh: Arc<RwLock<Mesh>>) {
+        let name = mesh.read().unwrap().name().to_string();
+        self.meshes.insert(name, mesh);
     }
 
     /// Returns a mesh with the given name.
-    pub fn mesh(&self, name: &str) -> Option<Arc<Mesh>> {
+    pub fn mesh(&self, name: &str) -> Option<Arc<RwLock<Mesh>>> {
         match self.meshes.get(name) {
             Some(mesh) => Some(mesh.clone()),
             None => None,
@@ -73,7 +75,7 @@ impl AssetManager {
     }
 
     /// Removes and returns a mesh with the given name.
-    pub fn remove_mesh(&mut self, name: &str) -> Option<Arc<Mesh>> {
+    pub fn remove_mesh(&mut self, name: &str) -> Option<Arc<RwLock<Mesh>>> {
         self.meshes.remove(name)
     }
 

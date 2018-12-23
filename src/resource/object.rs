@@ -1,3 +1,4 @@
+use std::sync::RwLock;
 use std::sync::Arc;
 use crate::resource::mesh::Mesh;
 use nalgebra_glm::{Mat4, Vec3};
@@ -30,7 +31,7 @@ pub struct Object {
 
     model_matrix: Mat4,
 
-    mesh: Option<Arc<Mesh>>,
+    mesh: Option<Arc<RwLock<Mesh>>>,
 }
 
 
@@ -215,7 +216,7 @@ impl Object {
     }
 
     /// Returns object Mesh if set or None if it doesn't have one.
-    pub fn mesh(&self) -> Option<Arc<Mesh>> {
+    pub fn mesh(&self) -> Option<Arc<RwLock<Mesh>>> {
         match &self.mesh {
             Some(mesh) => Some(mesh.clone()),
             None => None,
@@ -223,7 +224,7 @@ impl Object {
     }
 
     /// Sets object mesh.
-    pub fn set_mesh(&mut self, mesh: Arc<Mesh>) {
+    pub fn set_mesh(&mut self, mesh: Arc<RwLock<Mesh>>) {
         self.mesh = Some(mesh);
     }
 
@@ -293,7 +294,7 @@ pub struct ObjectBuilder {
     rotation_matrix: Mat4,
     scaling_matrix: Mat4, 
 
-    mesh: Option<Arc<Mesh>>,
+    mesh: Option<Arc<RwLock<Mesh>>>,
 }
 
 impl ObjectBuilder {
@@ -321,7 +322,7 @@ impl ObjectBuilder {
         }
     }
 
-    pub fn with_mesh(self, mesh: Arc<Mesh>) -> Self {
+    pub fn with_mesh(self, mesh: Arc<RwLock<Mesh>>) -> Self {
         Self {
             name: self.name,
 
