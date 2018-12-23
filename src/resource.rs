@@ -21,7 +21,6 @@ pub mod object;
 pub mod texture;
 
 const DEFAULT_TEXTURE_NAME: &'static str = "default";
-const DEFAULT_TEXTURE_PATH: &'static str = "data/default.png";
 
 /// Manages game assets and scenes.
 pub struct AssetManager {
@@ -39,7 +38,8 @@ pub struct AssetManager {
 impl AssetManager {
     /// Creates new asset manager.
     pub fn new(settings: Rc<RefCell<Settings>>, queues: Queues, device: Arc<Device>) -> Self {
-        let default_texture = Arc::new(Texture::load(DEFAULT_TEXTURE_NAME, DEFAULT_TEXTURE_PATH, queues.graphics_queue(), device.clone()));
+        let image = image::load_from_memory(include_bytes!("../data/default.png")).unwrap();
+        let default_texture = Arc::new(Texture::new(DEFAULT_TEXTURE_NAME, image.to_rgba(), queues.graphics_queue(), device.clone()));
         let mut textures = HashMap::new();
         textures.insert(DEFAULT_TEXTURE_NAME.to_string(), default_texture);
         AssetManager {
