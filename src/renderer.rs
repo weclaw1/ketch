@@ -156,13 +156,13 @@ impl Renderer {
         }   
     }
 
-    /// Creates command buffer using active scene in asset manager
+    /// Creates command buffer using active scene in asset manager.
     fn create_command_buffer(&mut self, image_num: usize, asset_manager: &mut AssetManager) -> Result<AutoCommandBuffer, RenderError> {
         let mut command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queues.graphics_queue().family())?
             .begin_render_pass(
                 self.framebuffers[image_num].clone(), false,
                 vec![
-                    [0.0, 0.0, 0.0, 1.0].into(),
+                    [1.0, 1.0, 1.0, 1.0].into(),
                 ]
             )?;
 
@@ -174,18 +174,17 @@ impl Renderer {
                 self.uniform_manager.update(uniform_data);
                 let uniform_buffer_subbuffer = self.uniform_manager.get_subbuffer_data()?;
 
-                let descriptor_set = Arc::new(PersistentDescriptorSet::start(self.pipeline.clone(), 0)
-                    .add_buffer(uniform_buffer_subbuffer)?
-                    .build()?
-                );
-
+                let descriptor_set = PersistentDescriptorSet::start(self.pipeline.clone(), 0)
+                                                             .add_buffer(uniform_buffer_subbuffer)?;
+                    
                 if let Some(mesh) = object.mesh() {
+                    let descriptor_set = descriptor_set.add_sampled_image(mesh.texture().image_buffer(), mesh.texture().sampler())?.build()?;
                     command_buffer = command_buffer.draw_indexed(
                         self.pipeline.clone(), 
                         &DynamicState::none(), 
                         vec!(mesh.vertex_buffer()),
                         mesh.index_buffer(), 
-                        descriptor_set.clone(),
+                        descriptor_set,
                         (),
                     )?;
                 }
@@ -195,7 +194,7 @@ impl Renderer {
         Ok(command_buffer.end_render_pass()?.build()?)
     }
 
-    /// Recreates swapchain when surface changed
+    /// Recreates swapchain when surface changed.
     fn recreate_swapchain(&mut self) -> Result<(), RenderError>{
         let window_dimensions = get_window_dimensions(self.settings.clone(), self.surface.window());
 
@@ -211,9 +210,14 @@ impl Renderer {
         Ok(())
     }
 
-    /// Returns vulkan queues
-    pub fn get_queues(&self) -> Queues {
+    /// Returns vulkan queues.
+    pub fn queues(&self) -> Queues {
         self.queues.clone()
+    }
+
+    /// Returns vulkan device.
+    pub fn device(&self) -> Arc<Device> {
+        self.device.clone()
     }
 
 }

@@ -1,9 +1,9 @@
 #version 450
 
 layout(location = 0) in vec3 position;
-layout(location = 1) in vec4 color;
+layout(location = 1) in vec2 tex_coord;
 
-layout(location = 0) out vec4 o_color;
+layout(location = 0) out vec2 o_tex_coord;
 
 //Global uniforms
 layout(set = 0, binding = 0) uniform TransformationData {
@@ -18,5 +18,5 @@ void main() {
   gl_Position.y = -gl_Position.y;
   gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 
-  o_color = color;
+  o_tex_coord = tex_coord;
 }

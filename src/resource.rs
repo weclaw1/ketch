@@ -1,3 +1,7 @@
+use image::RgbaImage;
+use std::path::Path;
+use vulkano::device::Device;
+use crate::resource::texture::Texture;
 use std::sync::Arc;
 use crate::resource::mesh::Vertex;
 use crate::renderer::queues::Queues;
@@ -14,6 +18,10 @@ pub mod mesh;
 pub mod camera;
 pub mod scene;
 pub mod object;
+pub mod texture;
+
+const DEFAULT_TEXTURE_NAME: &'static str = "default";
+const DEFAULT_TEXTURE_PATH: &'static str = "data/default.png";
 
 /// Manages game assets and scenes.
 pub struct AssetManager {
@@ -22,25 +30,32 @@ pub struct AssetManager {
 
     scenes: HashMap<String, Scene>,
     meshes: HashMap<String, Arc<Mesh>>,
+    textures: HashMap<String, Arc<Texture>>,
 
+    device: Arc<Device>,
     queues: Queues,
 }
 
 impl AssetManager {
     /// Creates new asset manager.
-    pub fn new(settings: Rc<RefCell<Settings>>, queues: Queues) -> Self {
+    pub fn new(settings: Rc<RefCell<Settings>>, queues: Queues, device: Arc<Device>) -> Self {
+        let default_texture = Arc::new(Texture::load(DEFAULT_TEXTURE_NAME, DEFAULT_TEXTURE_PATH, queues.graphics_queue(), device.clone()));
+        let mut textures = HashMap::new();
+        textures.insert(DEFAULT_TEXTURE_NAME.to_string(), default_texture);
         AssetManager {
             settings,
             active_scene: None,
             scenes: HashMap::new(),
             meshes: HashMap::new(),
+            textures,
             queues,
+            device,
         }
     }
 
     /// Creates a new mesh.
     pub fn create_mesh<S: Into<String>>(&self, name: S, vertices: Vec<Vertex>, indices: Vec<u32>) -> Arc<Mesh> {
-        Arc::new(Mesh::new(name, vertices, indices, self.queues.graphics_queue()))
+        Arc::new(Mesh::new(name, vertices, indices, self.textures.get(DEFAULT_TEXTURE_NAME).unwrap().clone(), self.queues.graphics_queue()))
     }
 
     /// Adds mesh to asset manager. Meshes need to have unique name. 
@@ -60,6 +75,39 @@ impl AssetManager {
     /// Removes and returns a mesh with the given name.
     pub fn remove_mesh(&mut self, name: &str) -> Option<Arc<Mesh>> {
         self.meshes.remove(name)
+    }
+
+    /// Loads and creates texture from file.
+    pub fn load_texture<S: Into<String>, P: AsRef<Path>>(&self, name: S, image_path: P) -> Arc<Texture> {
+        Arc::new(Texture::load(name, image_path, self.queues.graphics_queue(), self.device.clone()))
+    }
+
+    /// Creates texture from loaded image.
+    pub fn create_texture<S: Into<String>>(&self, name: S, image: RgbaImage) -> Arc<Texture> {
+        Arc::new(Texture::new(name, image, self.queues.graphics_queue(), self.device.clone()))
+    }
+
+    /// Adds texture to asset manager. Textures need to have unique name. 
+    /// If two textures have the same name, the old texture will be replaced with the new one.
+    pub fn add_texture(&mut self, texture: Arc<Texture>) {
+        self.textures.insert(texture.name().to_string(), texture);
+    }
+
+    /// Returns a texture with the given name.
+    pub fn texture(&self, name: &str) -> Option<Arc<Texture>> {
+        match self.textures.get(name) {
+            Some(texture) => Some(texture.clone()),
+            None => None,
+        }
+    }
+
+    /// Removes and returns a texture with the given name.
+    pub fn remove_texture(&mut self, name: &str) -> Option<Arc<Texture>> {
+        if name != DEFAULT_TEXTURE_NAME {
+            self.textures.remove(name)
+        } else {
+            None
+        }
     }
 
     /// Adds scene to asset manager. Scenes need to have unique name. 

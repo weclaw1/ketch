@@ -1,3 +1,4 @@
+use crate::resource::texture::Texture;
 use vulkano::buffer::BufferAccess;
 use std::sync::Arc;
 
@@ -10,10 +11,10 @@ use vulkano::device::Queue;
 #[derive(Clone,Copy)]
 pub struct Vertex {
     pub position: [f32; 3],
-    pub color: [f32; 4],
+    pub tex_coord: [f32; 2],
 }
 
-impl_vertex!(Vertex, position, color);
+impl_vertex!(Vertex, position, tex_coord);
 
 /// Mesh is a collection of vertices, edges and faces that defines shape of object.
 pub struct Mesh {
@@ -24,11 +25,13 @@ pub struct Mesh {
 
     indices: Vec<u32>,
     index_buffer: Arc<ImmutableBuffer<[u32]>>,
+
+    texture: Arc<Texture>,
 }
 
 impl Mesh {
     /// Creates new mesh.
-    pub fn new<S: Into<String>>(name: S, vertices: Vec<Vertex>, indices: Vec<u32>, upload_queue: Arc<Queue>) -> Self {
+    pub fn new<S: Into<String>>(name: S, vertices: Vec<Vertex>, indices: Vec<u32>, texture: Arc<Texture>, upload_queue: Arc<Queue>) -> Self {
         let (vertex_buffer, _buffer_future) = ImmutableBuffer::from_iter(
             vertices.iter().cloned(),
             BufferUsage::all(),
@@ -38,7 +41,7 @@ impl Mesh {
         let (index_buffer, _future) = ImmutableBuffer::from_iter(
             indices.iter().cloned(),
             BufferUsage::all(),
-            upload_queue.clone()
+            upload_queue
         ).expect("failed to create index buffer");
 
         Mesh {
@@ -49,12 +52,24 @@ impl Mesh {
 
             indices: indices,
             index_buffer: index_buffer,
+
+            texture,
         }
     }
 
     /// Returns the name of this mesh.
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Sets texture used by this mesh.
+    pub fn set_texture(&mut self, texture: Arc<Texture>) {
+        self.texture = texture;
+    }
+
+    /// Returns texture used by this mesh.
+    pub fn texture(&self) -> Arc<Texture> {
+        self.texture.clone()
     }
 
     /// Returns the vertex buffer of this mesh.

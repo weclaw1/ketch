@@ -38,7 +38,7 @@ impl<T: InputMapping> Smml<T> {
                 panic!("Couldn't create renderer!");
             },
         };
-        let asset_manager = AssetManager::new(settings.clone(), renderer.get_queues());
+        let asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
         
         Smml {
             renderer,
