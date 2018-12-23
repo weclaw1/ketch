@@ -49,9 +49,13 @@ impl Camera {
             fov: 45.0,
         }
     }
-
     /// Returns camera position
-    pub fn position(&self) -> Vec3 {
+    pub fn position(&self) -> (f32, f32, f32) {
+        (self.position.x, self.position.y, self.position.z)
+    }
+
+    /// Returns camera position as Vec3
+    pub fn position_vec3(&self) -> Vec3 {
         self.position
     }
 
@@ -63,6 +67,18 @@ impl Camera {
     /// Sets camera position using Vec3
     pub fn set_position_vec3(&mut self, position: Vec3) {
         self.position = position;
+    }
+
+    /// Moves camera in chosen direction
+    pub fn move_camera(&mut self, direction: Direction, value: f32) {
+        let change_vector = match direction {
+            Direction::Up    => value * self.front,
+            Direction::Down  => -(value * self.front),
+            Direction::Left  => -(glm::normalize(&glm::cross::<f32, U3>(&self.front, &self.up))),
+            Direction::Right => glm::normalize(&glm::cross::<f32, U3>(&self.front, &self.up)),
+        };
+
+        self.position += change_vector;
     }
 
     /// Returns camera yaw.
@@ -148,4 +164,11 @@ impl Camera {
             proj: self.get_projection_matrix().into(),
         }
     }
+}
+
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
 }
