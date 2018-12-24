@@ -78,18 +78,6 @@ impl<'a, T: InputMapping> InputSystem<'a, T> {
               .collect()
     }
 
-    pub fn grab_cursor(&self, value: bool) {
-        if let Some(surface) = &self.surface {
-            surface.window().grab_cursor(value).unwrap();
-        }
-    }
-
-    pub fn hide_cursor(&self, value: bool) {
-        if let Some(surface) = &self.surface {
-            surface.window().hide_cursor(value);
-        }
-    }
-
     fn load_events(&mut self) -> Vec<Event> {
         let mut events = Vec::new();
         let settings = self.settings.clone();
