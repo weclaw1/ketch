@@ -1,6 +1,5 @@
 pub mod input_event;
 
-use crate::resource::camera::Camera;
 use winit::Window;
 use vulkano::swapchain::Surface;
 use std::sync::Arc;
@@ -14,49 +13,35 @@ use winit::EventsLoop;
 use winit::Event;
 use winit::WindowEvent;
 
-/// Manages input. Gives access to input events and updates input mapping defined by the user.
-pub struct InputSystem<'a, T: InputMapping = NoInputMapping> {
+/// Manages input. Fetches input events and manages window.
+pub struct InputSystem {
     settings: Rc<RefCell<Settings>>,
     events_loop: EventsLoop,
-    input_mapping: Option<&'a mut T>,
     surface: Option<Arc<Surface<Window>>>,
+    grab_cursor: bool,
+    hide_cursor: bool,
 }
 
-impl<'a, T: InputMapping> InputSystem<'a, T> {
+impl InputSystem {
     /// Creates new input system. At first surface is set to None because renderer is created after input system.
     pub fn new(settings: Rc<RefCell<Settings>>) -> Self {
         let events_loop = EventsLoop::new();
 
+        let grab_cursor = settings.borrow().grab_cursor();
+        let hide_cursor = settings.borrow().hide_cursor();
+
         InputSystem {
             settings: settings,
             events_loop: events_loop,
-            input_mapping: None,
             surface: None,
+            grab_cursor,
+            hide_cursor,
         }
     }
 
     /// Returns a reference to the events loop.
     pub fn events_loop(&self) -> &EventsLoop {
         &self.events_loop
-    }
-
-    /// Sets the input mapping.
-    pub fn set_input_mapping(&mut self, mapping: &'a mut T) {
-        self.input_mapping = Some(mapping);
-    }
-
-    /// Returns an Option with mutable reference to current input mapping.
-    pub fn input_mapping(&self) -> Option<&T> {
-        match &self.input_mapping {
-            Some(mapping) => Some(& *mapping),
-            None => None,
-        }
-    }
-
-    /// Returns an Option with current input mapping. After using this function current input mapping
-    /// will be set to None.
-    pub fn take_input_mapping(&mut self) -> Option<&'a mut T> {
-        self.input_mapping.take()
     }
 
     /// Sets the current surface.
@@ -69,7 +54,7 @@ impl<'a, T: InputMapping> InputSystem<'a, T> {
         self.surface.as_ref().map(|x| x.window())
     }
 
-    /// Fetches pending input. Can be used to implement rebinding keys at runtime.
+    /// Fetches pending input.
     pub fn fetch_pending_input(&mut self) -> Vec<InputEvent> {
         let events = self.load_events();
 
@@ -80,16 +65,29 @@ impl<'a, T: InputMapping> InputSystem<'a, T> {
 
     fn load_events(&mut self) -> Vec<Event> {
         let mut events = Vec::new();
-        let settings = self.settings.clone();
+        let settings = self.settings.borrow_mut();
+
+        let setting_grab_cursor = settings.grab_cursor();
+        if self.grab_cursor != setting_grab_cursor {
+            &self.surface.unwrap().window().grab_cursor(setting_grab_cursor);
+            self.grab_cursor = setting_grab_cursor;
+        }
+
+        let setting_hide_cursor = settings.hide_cursor();
+        if self.hide_cursor != setting_hide_cursor {
+            &self.surface.unwrap().window().hide_cursor(setting_hide_cursor);
+            self.hide_cursor = setting_hide_cursor;
+        }
+
         self.events_loop.poll_events(|input_event| {
             match &input_event {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::CloseRequested => std::process::exit(0),
                     WindowEvent::Resized(logical_size) => {
-                        let dpi = settings.borrow().dpi();
-                        settings.borrow_mut().set_window_size(logical_size.to_physical(dpi));
+                        let dpi = settings.dpi();
+                        settings.set_window_size(logical_size.to_physical(dpi));
                     },
-                    WindowEvent::HiDpiFactorChanged(dpi) => settings.borrow_mut().set_dpi(*dpi),
+                    WindowEvent::HiDpiFactorChanged(dpi) => settings.set_dpi(*dpi),
                     _ => events.push(input_event),
                 },
                 _ => events.push(input_event),
@@ -97,35 +95,5 @@ impl<'a, T: InputMapping> InputSystem<'a, T> {
         });
 
         events
-    }
-
-    /// Method executed by the engine to update input mapping with pending input events.
-    pub fn update(&mut self) {
-        let events = self.load_events();
-
-        if let Some(input_mapping) = &mut self.input_mapping {
-            let input_events: Vec<InputEvent> = events.into_iter()
-                                                      .filter_map(|event| input_event::to_input_event(event))
-                                                      .collect();
-
-            input_mapping.update_input(&input_events);
-        }
-    }
-}
-
-pub trait InputMapping {
-    fn update_input(&mut self, input: &[InputEvent]);
-    fn update_camera(&mut self, camera: &mut Camera);
-}
-
-pub struct NoInputMapping {}
-
-impl InputMapping for NoInputMapping {
-    fn update_input(&mut self, _input: &[InputEvent]) {
-
-    }
-
-    fn update_camera(&mut self, _camera: &mut Camera) {
-
     }
 }

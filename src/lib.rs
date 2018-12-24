@@ -3,11 +3,11 @@ pub mod settings;
 pub mod resource;
 pub mod input;
 
-use crate::input::NoInputMapping;
+use crate::input::input_event::InputEvent;
 use crate::resource::AssetManager;
 use crate::renderer::{Renderer};
 use crate::settings::Settings;
-use crate::input::{InputSystem, InputMapping};
+use crate::input::InputSystem;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -19,14 +19,14 @@ use log::*;
 
 /// A struct representing the top level of this engine.
 /// It provides access to all the subsystems that can be used.
-pub struct Smml<'a, T: InputMapping = NoInputMapping> {
+pub struct Smml {
     renderer: Renderer,
     asset_manager: AssetManager,
-    input_system: InputSystem<'a, T>,
+    input_system: InputSystem,
     settings: Rc<RefCell<Settings>>,
 }
 
-impl<'a, T: InputMapping> Smml<'a, T> {
+impl Smml {
     /// Creates and returns a new instance of this engine.
     pub fn new() -> Self {
         let settings = Rc::new(RefCell::new(Settings::new("smml", 800.0, 600.0)));
@@ -54,12 +54,12 @@ impl<'a, T: InputMapping> Smml<'a, T> {
     }
 
     /// Returns a reference to input system, which updates input mapping implemented by the user.
-    pub fn input_system_mut(&mut self) -> &mut InputSystem<'a, T> {
+    pub fn input_system_mut(&mut self) -> &mut InputSystem {
         &mut self.input_system
     }
 
     /// Runs the game loop. Takes a closure which updates the game as a parameter.
-    pub fn run<F: FnMut(&mut Settings, &mut AssetManager, &mut InputSystem<T>, Duration)>(&mut self, mut update: F) {
+    pub fn run<F: FnMut(&mut Settings, &mut AssetManager, &[InputEvent], Duration)>(&mut self, mut update: F) {
         let mut fps_counter = FPSCounter::new();
         let log_fps_frequency = self.settings.borrow().log_fps_frequency();
         let time_per_update = self.settings.borrow().time_per_update();
@@ -73,10 +73,10 @@ impl<'a, T: InputMapping> Smml<'a, T> {
             previous_time = Instant::now();
             lag += elapsed;
 
-            self.input_system.update();
+            let input_events = self.input_system.fetch_pending_input();
 
             while lag >= time_per_update {
-                update(&mut self.settings.borrow_mut(), &mut self.asset_manager, &mut self.input_system, time_per_update);
+                update(&mut self.settings.borrow_mut(), &mut self.asset_manager, &input_events, time_per_update);
 
                 lag -= time_per_update;
             }
