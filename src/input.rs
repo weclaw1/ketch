@@ -78,6 +78,18 @@ impl<'a, T: InputMapping> InputSystem<'a, T> {
               .collect()
     }
 
+    pub fn grab_cursor(&self, value: bool) {
+        if let Some(surface) = &self.surface {
+            surface.window().grab_cursor(value).unwrap();
+        }
+    }
+
+    pub fn hide_cursor(&self, value: bool) {
+        if let Some(surface) = &self.surface {
+            surface.window().hide_cursor(value);
+        }
+    }
+
     fn load_events(&mut self) -> Vec<Event> {
         let mut events = Vec::new();
         let settings = self.settings.clone();
@@ -115,7 +127,7 @@ impl<'a, T: InputMapping> InputSystem<'a, T> {
 
 pub trait InputMapping {
     fn update_input(&mut self, input: &[InputEvent]);
-    fn update_camera(&self, camera: &mut Camera);
+    fn update_camera(&mut self, camera: &mut Camera);
 }
 
 pub struct NoInputMapping {}
@@ -125,7 +137,7 @@ impl InputMapping for NoInputMapping {
 
     }
 
-    fn update_camera(&self, _camera: &mut Camera) {
+    fn update_camera(&mut self, _camera: &mut Camera) {
 
     }
 }
