@@ -65,17 +65,17 @@ impl InputSystem {
 
     fn load_events(&mut self) -> Vec<Event> {
         let mut events = Vec::new();
-        let settings = self.settings.borrow_mut();
+        let mut settings = self.settings.borrow_mut();
 
         let setting_grab_cursor = settings.grab_cursor();
         if self.grab_cursor != setting_grab_cursor {
-            &self.surface.unwrap().window().grab_cursor(setting_grab_cursor);
+            self.window().unwrap().grab_cursor(setting_grab_cursor).unwrap();
             self.grab_cursor = setting_grab_cursor;
         }
 
         let setting_hide_cursor = settings.hide_cursor();
         if self.hide_cursor != setting_hide_cursor {
-            &self.surface.unwrap().window().hide_cursor(setting_hide_cursor);
+            self.window().unwrap().hide_cursor(setting_hide_cursor);
             self.hide_cursor = setting_hide_cursor;
         }
 
