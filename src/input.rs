@@ -1,5 +1,6 @@
 pub mod input_event;
 
+use crate::resource::camera::Camera;
 use winit::Window;
 use vulkano::swapchain::Surface;
 use std::sync::Arc;
@@ -14,14 +15,14 @@ use winit::Event;
 use winit::WindowEvent;
 
 /// Manages input. Gives access to input events and updates input mapping defined by the user.
-pub struct InputSystem<T: InputMapping = NoInputMapping> {
+pub struct InputSystem<'a, T: InputMapping = NoInputMapping> {
     settings: Rc<RefCell<Settings>>,
     events_loop: EventsLoop,
-    input_mapping: Option<T>,
+    input_mapping: Option<&'a mut T>,
     surface: Option<Arc<Surface<Window>>>,
 }
 
-impl<T: InputMapping> InputSystem<T> {
+impl<'a, T: InputMapping> InputSystem<'a, T> {
     /// Creates new input system. At first surface is set to None because renderer is created after input system.
     pub fn new(settings: Rc<RefCell<Settings>>) -> Self {
         let events_loop = EventsLoop::new();
@@ -40,18 +41,21 @@ impl<T: InputMapping> InputSystem<T> {
     }
 
     /// Sets the input mapping.
-    pub fn set_input_mapping(&mut self, mapping: T) {
+    pub fn set_input_mapping(&mut self, mapping: &'a mut T) {
         self.input_mapping = Some(mapping);
     }
 
-    /// Returns an Option with reference to current input mapping.
+    /// Returns an Option with mutable reference to current input mapping.
     pub fn input_mapping(&self) -> Option<&T> {
-        self.input_mapping.as_ref()
+        match &self.input_mapping {
+            Some(mapping) => Some(& *mapping),
+            None => None,
+        }
     }
 
     /// Returns an Option with current input mapping. After using this function current input mapping
     /// will be set to None.
-    pub fn take_input_mapping(&mut self) -> Option<T> {
+    pub fn take_input_mapping(&mut self) -> Option<&'a mut T> {
         self.input_mapping.take()
     }
 
@@ -111,12 +115,17 @@ impl<T: InputMapping> InputSystem<T> {
 
 pub trait InputMapping {
     fn update_input(&mut self, input: &[InputEvent]);
+    fn update_camera(&self, camera: &mut Camera);
 }
 
 pub struct NoInputMapping {}
 
 impl InputMapping for NoInputMapping {
     fn update_input(&mut self, _input: &[InputEvent]) {
+
+    }
+
+    fn update_camera(&self, _camera: &mut Camera) {
 
     }
 }

@@ -19,14 +19,14 @@ use log::*;
 
 /// A struct representing the top level of this engine.
 /// It provides access to all the subsystems that can be used.
-pub struct Smml<T: InputMapping = NoInputMapping> {
+pub struct Smml<'a, T: InputMapping = NoInputMapping> {
     renderer: Renderer,
     asset_manager: AssetManager,
-    input_system: InputSystem<T>,
+    input_system: InputSystem<'a, T>,
     settings: Rc<RefCell<Settings>>,
 }
 
-impl<T: InputMapping> Smml<T> {
+impl<'a, T: InputMapping> Smml<'a, T> {
     /// Creates and returns a new instance of this engine.
     pub fn new() -> Self {
         let settings = Rc::new(RefCell::new(Settings::new("smml", 800.0, 600.0)));
@@ -54,7 +54,7 @@ impl<T: InputMapping> Smml<T> {
     }
 
     /// Returns a reference to input system, which updates input mapping implemented by the user.
-    pub fn input_system_mut(&mut self) -> &mut InputSystem<T> {
+    pub fn input_system_mut(&mut self) -> &mut InputSystem<'a, T> {
         &mut self.input_system
     }
 
