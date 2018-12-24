@@ -74,8 +74,8 @@ impl Camera {
         let change_vector = match direction {
             Direction::Up    => value * self.front,
             Direction::Down  => -(value * self.front),
-            Direction::Left  => -(glm::normalize(&glm::cross::<f32, U3>(&self.front, &self.up))),
-            Direction::Right => glm::normalize(&glm::cross::<f32, U3>(&self.front, &self.up)),
+            Direction::Left  => -(value * glm::normalize(&glm::cross::<f32, U3>(&self.front, &self.up))),
+            Direction::Right => value * glm::normalize(&glm::cross::<f32, U3>(&self.front, &self.up)),
         };
 
         self.position += change_vector;
