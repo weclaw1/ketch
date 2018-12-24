@@ -58,8 +58,16 @@ impl Smml {
         &mut self.input_system
     }
 
-    /// Runs the game loop. Takes a closure which updates the game as a parameter.
-    pub fn run<F: FnMut(&mut Settings, &mut AssetManager, &[InputEvent], Duration)>(&mut self, mut update: F) {
+    /// Returns a mutable reference to the asset manager.
+    pub fn asset_manager_mut(&mut self) -> &mut AssetManager {
+        &mut self.asset_manager
+    }
+
+    pub fn renderer_mut(&mut self) -> &mut Renderer {
+        &mut self.renderer
+    }
+
+    pub fn run<S: EventHandler>(&mut self, mut state: S) {
         let mut fps_counter = FPSCounter::new();
         let log_fps_frequency = self.settings.borrow().log_fps_frequency();
         let time_per_update = self.settings.borrow().time_per_update();
@@ -73,10 +81,10 @@ impl Smml {
             previous_time = Instant::now();
             lag += elapsed;
 
-            let input_events = self.input_system.fetch_pending_input();
+            state.process_input(self.input_system.fetch_pending_input());
 
             while lag >= time_per_update {
-                update(&mut self.settings.borrow_mut(), &mut self.asset_manager, &input_events, time_per_update);
+                state.update(&mut self.settings.borrow_mut(), &mut self.asset_manager, time_per_update);
 
                 lag -= time_per_update;
             }
@@ -93,17 +101,9 @@ impl Smml {
             }
         }
     }
-
-    /// Returns a mutable reference to the asset manager.
-    pub fn asset_manager_mut(&mut self) -> &mut AssetManager {
-        &mut self.asset_manager
-    }
 }
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
+pub trait EventHandler {
+    fn process_input(&mut self, input_events: Vec<InputEvent>);
+    fn update(&mut self, settings: &mut Settings, asset_manager: &mut AssetManager, elapsed_time: Duration);
 }
