@@ -3,6 +3,7 @@ pub mod settings;
 pub mod resource;
 pub mod input;
 
+use std::error::Error;
 use crate::input::input_event::InputEvent;
 use crate::resource::AssetManager;
 use crate::renderer::{Renderer};
@@ -34,7 +35,8 @@ impl Smml {
         let renderer = match Renderer::new(settings.clone(), input_system.events_loop()) {
             Ok(renderer) => renderer,
             Err(e) => {
-                error!("{}", e);
+                error!("Error: {}", e);
+                error!("Caused by: {}", e.cause().unwrap());
                 panic!("Couldn't create renderer!");
             },
         };
