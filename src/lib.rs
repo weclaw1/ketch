@@ -29,8 +29,8 @@ pub struct Smml {
 
 impl Smml {
     /// Creates and returns a new instance of this engine.
-    pub fn new() -> Self {
-        let settings = Rc::new(RefCell::new(Settings::new("smml", 800.0, 600.0)));
+    pub fn new(settings: Settings) -> Self {
+        let settings = Rc::new(RefCell::new(settings));
         let input_system = InputSystem::new(settings.clone());
         let renderer = match Renderer::new(settings.clone(), input_system.events_loop()) {
             Ok(renderer) => renderer,
