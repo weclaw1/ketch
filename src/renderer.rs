@@ -164,6 +164,7 @@ impl Renderer {
                 self.framebuffers[image_num].clone(), false,
                 vec![
                     [1.0, 1.0, 1.0, 1.0].into(),
+                    1f32.into(),
                 ]
             )?;
 
