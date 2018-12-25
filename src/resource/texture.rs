@@ -1,3 +1,4 @@
+use image::DynamicImage;
 use vulkano::device::Device;
 use std::sync::Arc;
 use vulkano::device::Queue;
@@ -22,13 +23,13 @@ impl Texture {
             Ok(image) => image,
             Err(e) => panic!("Couldn't load image: {}", e),
         };
-        let image_rgba = loaded_image.to_rgba();
 
-        Texture::new(name, image_rgba, upload_queue, device)
+        Texture::new(name, loaded_image, upload_queue, device)
     }
 
     /// Creates new texture from loaded image.
-    pub fn new<S: Into<String>>(name: S, image: RgbaImage, upload_queue: Arc<Queue>, device: Arc<Device>) -> Self {
+    pub fn new<S: Into<String>>(name: S, image: DynamicImage, upload_queue: Arc<Queue>, device: Arc<Device>) -> Self {
+        let image = image.flipv().to_rgba();
         let (image_buffer, _future) = ImmutableImage::from_iter(
             image.clone().into_raw().into_iter(),
             Dimensions::Dim2d { width: image.width(), height: image.height() },
