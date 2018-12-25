@@ -1,5 +1,5 @@
 [package]
-name = "smml"
+name = "bliss-engine"
 version = "0.1.0"
 authors = ["Robert Węcławski <r.weclawski@gmail.com>"]
 edition = "2018"

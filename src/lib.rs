@@ -20,14 +20,14 @@ use log::*;
 
 /// A struct representing the top level of this engine.
 /// It provides access to all the subsystems that can be used.
-pub struct Smml {
+pub struct Engine {
     renderer: Renderer,
     asset_manager: AssetManager,
     input_system: InputSystem,
     settings: Rc<RefCell<Settings>>,
 }
 
-impl Smml {
+impl Engine {
     /// Creates and returns a new instance of this engine.
     pub fn new(settings: Settings) -> Self {
         let settings = Rc::new(RefCell::new(settings));
@@ -43,7 +43,7 @@ impl Smml {
         input_system.set_surface(renderer.surface());
         let asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
         
-        Smml {
+        Engine {
             renderer,
             asset_manager,
             input_system,
