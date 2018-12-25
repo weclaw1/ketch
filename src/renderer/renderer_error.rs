@@ -1,3 +1,4 @@
+use vulkano::image::ImageCreationError;
 use vulkano::sync::FlushError;
 use vulkano::command_buffer::CommandBufferExecError;
 use vulkano::command_buffer::BuildError;

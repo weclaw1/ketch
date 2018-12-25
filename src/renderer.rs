@@ -13,6 +13,7 @@ use vulkano::framebuffer::RenderPassCreationError;
 use vulkano::device::DeviceCreationError;
 use vulkano::device::QueuesIter;
 use vulkano::instance::QueueFamily;
+use vulkano::image::attachment::AttachmentImage;
 use crate::resource::AssetManager;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -93,7 +94,7 @@ impl Renderer {
         let render_pass = create_renderpass(device.clone(), swapchain.format())?;
 
         let pipeline = create_pipeline(device.clone(), shader_set.clone(), &images, render_pass.clone())?;
-        let framebuffers = create_framebuffers(&images, render_pass.clone())?;
+        let framebuffers = create_framebuffers(device.clone(), &images, render_pass.clone())?;
 
         Ok(Renderer {
             settings,
@@ -208,7 +209,7 @@ impl Renderer {
         self.images = new_images;
 
         self.pipeline = create_pipeline(self.device.clone(), self.shader_set.clone(), &self.images, self.render_pass.clone())?;
-        self.framebuffers = create_framebuffers(&self.images, self.render_pass.clone())?;
+        self.framebuffers = create_framebuffers(self.device.clone(), &self.images, self.render_pass.clone())?;
 
         self.recreate_swapchain = false;
         Ok(())
@@ -232,15 +233,21 @@ impl Renderer {
 
 /// Creates framebuffers, which contain list of images that are attached.
 fn create_framebuffers(
+    device: Arc<Device>,
     images: &[Arc<SwapchainImage<Window>>], 
     render_pass: Arc<RenderPassAbstract + Send + Sync>
 ) -> Result<Vec<Arc<FramebufferAbstract + Send + Sync>>, FramebufferCreationError> {
+
+    let dimensions = images[0].dimensions();
+    let depth_buffer = AttachmentImage::transient(device, dimensions, Format::D16Unorm)
+                                       .expect("Couldn't create depth buffer!");
 
     let mut framebuffers = Vec::with_capacity(images.len());
 
     for image in images {
         let framebuffer = Framebuffer::start(render_pass.clone())
                                                         .add(image.clone())?
+                                                        .add(depth_buffer.clone())?
                                                         .build()?;
         framebuffers.push(Arc::new(framebuffer) as Arc<FramebufferAbstract + Send + Sync>);
     }
@@ -269,6 +276,7 @@ fn create_pipeline(
             depth_range: 0.0 .. 1.0,
         }))
         .fragment_shader(shader_set.fragment_shader().main_entry_point(), ())
+        .depth_stencil_simple_depth()
         .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
         .build(device.clone())?;
 
@@ -376,11 +384,17 @@ fn create_renderpass(device: Arc<Device>, format: Format) -> Result<Arc<RenderPa
                                     store: Store,
                                     format: format,
                                     samples: 1,
+                                },
+                                depth: {
+                                    load: Clear,
+                                    store: DontCare,
+                                    format: Format::D16Unorm,
+                                    samples: 1,
                                 }
                             },
                             pass: {
                                 color: [color],
-                                depth_stencil: {}
+                                depth_stencil: {depth}
                             }
                       )?;
     Ok(Arc::new(render_pass))
