@@ -71,16 +71,20 @@ impl InputSystem {
 
         let setting_grab_cursor = settings.grab_cursor();
         if self.grab_cursor != setting_grab_cursor {
-            match self.window().unwrap().grab_cursor(setting_grab_cursor) {
-                Ok(res) => self.grab_cursor = setting_grab_cursor,
-                Err(err) => error!("Error: {}", err),
-            }  
+            if let Some(window) = self.window() {
+                match window.grab_cursor(setting_grab_cursor) {
+                    Ok(res) => self.grab_cursor = setting_grab_cursor,
+                    Err(err) => error!("Error: {}", err),
+                }  
+            }
         }
 
         let setting_hide_cursor = settings.hide_cursor();
         if self.hide_cursor != setting_hide_cursor {
-            self.window().unwrap().hide_cursor(setting_hide_cursor);
-            self.hide_cursor = setting_hide_cursor;
+            if let Some(window) = self.window() {
+                window.hide_cursor(setting_hide_cursor);
+                self.hide_cursor = setting_hide_cursor;
+            }
         }
 
         self.events_loop.poll_events(|input_event| {
