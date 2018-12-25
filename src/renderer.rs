@@ -224,6 +224,10 @@ impl Renderer {
         self.device.clone()
     }
 
+    pub fn surface(&self) -> Arc<Surface<Window>> {
+        self.surface.clone()
+    }
+
 }
 
 /// Creates framebuffers, which contain list of images that are attached.

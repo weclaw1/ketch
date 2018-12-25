@@ -31,7 +31,7 @@ impl Smml {
     /// Creates and returns a new instance of this engine.
     pub fn new(settings: Settings) -> Self {
         let settings = Rc::new(RefCell::new(settings));
-        let input_system = InputSystem::new(settings.clone());
+        let mut input_system = InputSystem::new(settings.clone());
         let renderer = match Renderer::new(settings.clone(), input_system.events_loop()) {
             Ok(renderer) => renderer,
             Err(e) => {
@@ -40,6 +40,7 @@ impl Smml {
                 panic!("Couldn't create renderer!");
             },
         };
+        input_system.set_surface(renderer.surface());
         let asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
         
         Smml {
