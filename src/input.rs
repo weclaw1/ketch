@@ -13,6 +13,8 @@ use winit::EventsLoop;
 use winit::Event;
 use winit::WindowEvent;
 
+use log::*;
+
 /// Manages input. Fetches input events and manages window.
 pub struct InputSystem {
     settings: Rc<RefCell<Settings>>,
@@ -69,8 +71,10 @@ impl InputSystem {
 
         let setting_grab_cursor = settings.grab_cursor();
         if self.grab_cursor != setting_grab_cursor {
-            self.window().unwrap().grab_cursor(setting_grab_cursor).unwrap();
-            self.grab_cursor = setting_grab_cursor;
+            match self.window().unwrap().grab_cursor(setting_grab_cursor) {
+                Ok(res) => self.grab_cursor = setting_grab_cursor,
+                Err(err) => error!("Error: {}", err),
+            }  
         }
 
         let setting_hide_cursor = settings.hide_cursor();
