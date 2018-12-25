@@ -1,3 +1,4 @@
+use image::DynamicImage;
 use std::sync::RwLock;
 use image::RgbaImage;
 use std::path::Path;
@@ -85,7 +86,7 @@ impl AssetManager {
     }
 
     /// Creates texture from loaded image.
-    pub fn create_texture<S: Into<String>>(&self, name: S, image: RgbaImage) -> Arc<Texture> {
+    pub fn create_texture<S: Into<String>>(&self, name: S, image: DynamicImage) -> Arc<Texture> {
         Arc::new(Texture::new(name, image, self.queues.graphics_queue(), self.device.clone()))
     }
 
