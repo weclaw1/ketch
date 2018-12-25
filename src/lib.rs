@@ -79,6 +79,8 @@ impl Smml {
         let mut previous_time = Instant::now();
         let mut lag = Duration::new(0, 0);
 
+        state.init(&mut self.settings.borrow_mut(), &mut self.asset_manager);
+
         loop {
             let elapsed = previous_time.elapsed();
             previous_time = Instant::now();
@@ -109,4 +111,5 @@ impl Smml {
 pub trait EventHandler {
     fn process_input(&mut self, input_events: Vec<InputEvent>);
     fn update(&mut self, settings: &mut Settings, asset_manager: &mut AssetManager, elapsed_time: Duration);
+    fn init(&mut self, settings: &mut Settings, asset_manager: &mut AssetManager);
 }
