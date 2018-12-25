@@ -331,7 +331,10 @@ fn create_swapchain<'a>(settings: Rc<RefCell<Settings>>, surface: Arc<Surface<Wi
     let usage = capabilities.supported_usage_flags;
     let format = capabilities.supported_formats[0].0;
 
-    let initial_dimensions = get_window_dimensions(settings, surface.window());
+    let initial_dimensions = match capabilities.current_extent {
+        Some(dimensions) => dimensions,
+        None => get_window_dimensions(settings, surface.window()),
+    };
 
     let present_mode = {
         if capabilities.present_modes.mailbox {
