@@ -101,3 +101,92 @@ impl InputSystem {
         events
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::renderer::Renderer;
+    use super::*;
+
+    #[test]
+    fn window_is_none_after_creation() {
+        let settings = Rc::new(RefCell::new(Settings::new("test", 800.0, 600.0)));
+        let input_system = InputSystem::new(settings.clone());
+
+        assert!(input_system.window().is_none());
+    }
+
+    #[test]
+    fn window_is_some_after_setting_surface() {
+        let settings = Rc::new(RefCell::new(Settings::new("test", 100.0, 100.0)));
+        let mut input_system = InputSystem::new(settings.clone());
+        let renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
+
+        input_system.set_surface(renderer.surface());
+
+        assert!(input_system.window().is_some());
+    }
+
+    #[test]
+    fn window_is_grabbed_when_grab_setting_is_true() {
+        let settings = Rc::new(RefCell::new(Settings::new("test", 100.0, 100.0)));
+        let mut input_system = InputSystem::new(settings.clone());
+        settings.borrow_mut().set_grab_cursor(true);
+        let renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
+
+        input_system.set_surface(renderer.surface());
+
+        assert!(input_system.grab_cursor == false);
+
+        input_system.fetch_pending_input();
+
+        assert!(input_system.grab_cursor == true);
+    }
+
+    #[test]
+    fn window_is_not_grabbed_when_grab_setting_is_false() {
+        let settings = Rc::new(RefCell::new(Settings::new("test", 100.0, 100.0)));
+        let mut input_system = InputSystem::new(settings.clone());
+        settings.borrow_mut().set_grab_cursor(false);
+        let renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
+
+        input_system.set_surface(renderer.surface());
+
+        assert!(input_system.grab_cursor == false);
+
+        input_system.fetch_pending_input();
+
+        assert!(input_system.grab_cursor == false);
+    }
+
+    #[test]
+    fn window_is_hidden_when_hide_setting_is_true() {
+        let settings = Rc::new(RefCell::new(Settings::new("test", 100.0, 100.0)));
+        let mut input_system = InputSystem::new(settings.clone());
+        settings.borrow_mut().set_hide_cursor(true);
+        let renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
+
+        input_system.set_surface(renderer.surface());
+
+        assert!(input_system.hide_cursor == false);
+
+        input_system.fetch_pending_input();
+
+        assert!(input_system.hide_cursor == true);
+    }
+
+    #[test]
+    fn window_is_not_hidden_when_hide_setting_is_false() {
+        let settings = Rc::new(RefCell::new(Settings::new("test", 100.0, 100.0)));
+        let mut input_system = InputSystem::new(settings.clone());
+        settings.borrow_mut().set_hide_cursor(false);
+        let renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
+
+        input_system.set_surface(renderer.surface());
+
+        assert!(input_system.hide_cursor == false);
+
+        input_system.fetch_pending_input();
+
+        assert!(input_system.hide_cursor == false);
+    }
+}
