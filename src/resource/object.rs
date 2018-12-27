@@ -548,4 +548,12 @@ mod tests {
         let model_matrix_6 = object.model_matrix();
         assert_ne!(model_matrix_5, model_matrix_6);
     }
+
+    #[test]
+    fn cloned_object_has_different_id() {
+        let object = ObjectBuilder::new("test").build();
+        let cloned_object = object.clone();
+
+        assert_ne!(object.id(), cloned_object.id());
+    }
 }

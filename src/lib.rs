@@ -1,4 +1,4 @@
-mod renderer;
+pub mod renderer;
 pub mod settings;
 pub mod resource;
 pub mod input;
@@ -64,10 +64,6 @@ impl Engine {
     /// Returns a mutable reference to the asset manager.
     pub fn asset_manager_mut(&mut self) -> &mut AssetManager {
         &mut self.asset_manager
-    }
-
-    pub fn renderer_mut(&mut self) -> &mut Renderer {
-        &mut self.renderer
     }
 
     pub fn run<S: EventHandler>(&mut self, mut state: S) {

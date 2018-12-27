@@ -148,4 +148,17 @@ impl AssetManager {
     pub fn active_scene_mut(&mut self) -> Option<&mut Scene> {
         self.active_scene.as_mut()
     }
+
+    /// Changes active scene to another one. If asset manager doesn't have scene with provided name currently
+    /// active scene won't be changed.
+    pub fn change_active_scene(&mut self, new_scene_name: &str) {
+        let mut old_active_scene: Option<Scene> = None;
+        if let Some(new_scene) = self.remove_scene(new_scene_name) {
+            old_active_scene = self.remove_active_scene();
+            self.set_active_scene(new_scene);
+        }
+        if let Some(old_active_scene) = old_active_scene {
+            self.add_scene(old_active_scene);
+        }
+    }
 }
