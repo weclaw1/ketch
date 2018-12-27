@@ -471,3 +471,31 @@ fn generate_id() -> u32 {
     let id = ID_COUNTER.fetch_add(1, Ordering::SeqCst) + 1;
     id as u32
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_set_position_functions_change_model_matrix() {
+        let mut object = ObjectBuilder::new("test").with_position(0.0, 0.0, 0.0).build();
+        let model_matrix = object.model_matrix();
+
+        object.set_position(1.0, 1.0, 1.0);
+        let model_matrix_2 = object.model_matrix();
+
+        assert_ne!(model_matrix, model_matrix_2);
+
+        object.set_position_x(2.0);
+        let model_matrix_3 = object.model_matrix();
+        assert_ne!(model_matrix_2, model_matrix_3);
+
+        object.set_position_y(2.0);
+        let model_matrix_4 = object.model_matrix();
+        assert_ne!(model_matrix_3, model_matrix_4);
+
+        object.set_position_z(2.0);
+        let model_matrix_5 = object.model_matrix();
+        assert_ne!(model_matrix_4, model_matrix_5);
+    }
+}

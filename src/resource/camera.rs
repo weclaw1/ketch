@@ -137,12 +137,12 @@ impl Camera {
     }
 
     /// Returns camera view matrix.
-    pub fn get_view_matrix(&self) -> Mat4 {
+    pub fn view_matrix(&self) -> Mat4 {
         glm::look_at(&self.position, &(&self.position + &self.front), &self.up)
     }
 
     /// Returns camera projection matrix.
-    pub fn get_projection_matrix(&self) -> Mat4 {
+    pub fn projection_matrix(&self) -> Mat4 {
         let (window_size, near_plane, far_plane) = {
             let settings = self.settings.borrow();
             (
@@ -160,8 +160,8 @@ impl Camera {
     pub fn as_uniform_data(&self) -> TransformationData {
         TransformationData {
             model: Mat4::identity().into(),
-            view: self.get_view_matrix().into(),
-            proj: self.get_projection_matrix().into(),
+            view: self.view_matrix().into(),
+            proj: self.projection_matrix().into(),
         }
     }
 }
@@ -171,4 +171,192 @@ pub enum Direction {
     Down,
     Left,
     Right,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_move_camera_left() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let value = 2.0;
+        let front = camera.front;
+        let up = camera.up;
+        let mut position = Vec3::new(0.0, 0.0, 3.0);
+
+        camera.set_position_vec3(position);
+        camera.move_camera(Direction::Left, value);
+
+        let change_vector = -(value * glm::normalize(&glm::cross::<f32, U3>(&front, &up)));
+        position += change_vector;
+
+        assert_eq!(position, camera.position_vec3());
+    }
+
+    #[test]
+    fn test_move_camera_right() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let value = 2.0;
+        let front = camera.front;
+        let up = camera.up;
+        let mut position = Vec3::new(0.0, 0.0, 3.0);
+
+        camera.set_position_vec3(position);
+        camera.move_camera(Direction::Right, value);
+
+        let change_vector = value * glm::normalize(&glm::cross::<f32, U3>(&front, &up));
+        position += change_vector;
+
+        assert_eq!(position, camera.position_vec3());
+    }
+
+    #[test]
+    fn test_move_camera_up() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let value = 2.0;
+        let front = camera.front;
+        let mut position = Vec3::new(0.0, 0.0, 3.0);
+
+        camera.set_position_vec3(position);
+        camera.move_camera(Direction::Up, value);
+
+        let change_vector = value * front;
+        position += change_vector;
+
+        assert_eq!(position, camera.position_vec3());
+    }
+
+    #[test]
+    fn test_move_camera_down() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let value = 2.0;
+        let front = camera.front;
+        let mut position = Vec3::new(0.0, 0.0, 3.0);
+
+        camera.set_position_vec3(position);
+        camera.move_camera(Direction::Down, value);
+
+        let change_vector = -(value * front);
+        position += change_vector;
+
+        assert_eq!(position, camera.position_vec3());
+    }
+
+    #[test]
+    fn changing_position_changes_view_matrix() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let position = Vec3::new(0.0, 0.0, 3.0);
+        camera.set_position_vec3(position);
+        let view_matrix = camera.view_matrix();
+
+        let new_position = Vec3::new(-10.0, 2.0, 3.0);
+        camera.set_position_vec3(new_position);
+        let new_view_matrix = camera.view_matrix();
+
+        assert_ne!(view_matrix, new_view_matrix);
+    }
+
+    #[test]
+    fn changing_yaw_changes_view_matrix() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let yaw = 5.0;
+        camera.set_yaw(yaw);
+        let view_matrix = camera.view_matrix();
+
+        let new_yaw = -4.0;
+        camera.set_yaw(new_yaw);
+        let new_view_matrix = camera.view_matrix();
+
+        assert_ne!(view_matrix, new_view_matrix);
+    }
+
+    #[test]
+    fn changing_pitch_changes_view_matrix() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let pitch = 5.0;
+        camera.set_pitch(pitch);
+        let view_matrix = camera.view_matrix();
+
+        let new_pitch = -4.0;
+        camera.set_pitch(new_pitch);
+        let new_view_matrix = camera.view_matrix();
+
+        assert_ne!(view_matrix, new_view_matrix);
+    }
+
+    #[test]
+    fn changing_fov_changes_projection_matrix() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let fov = 5.0;
+        camera.set_fov(fov);
+        let projection_matrix = camera.projection_matrix();
+
+        let new_fov = 10.0;
+        camera.set_fov(new_fov);
+        let new_projection_matrix = camera.projection_matrix();
+
+        assert_ne!(projection_matrix, new_projection_matrix);
+    }
+
+    #[test]
+    fn if_pitch_is_greater_than_max_pitch_set_pitch_to_max_pitch() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let pitch = MAX_PITCH + 1.0;
+        camera.set_pitch(pitch);
+
+        assert_eq!(MAX_PITCH, camera.pitch());
+    }
+
+        #[test]
+    fn if_pitch_is_less_than_min_pitch_set_pitch_to_min_pitch() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let pitch = MIN_PITCH - 1.0;
+        camera.set_pitch(pitch);
+
+        assert_eq!(MIN_PITCH, camera.pitch());
+    }
+
+    #[test]
+    fn if_fov_is_greater_than_max_fov_set_fov_to_max_fov() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let fov = MAX_FOV + 1.0;
+        camera.set_fov(fov);
+
+        assert_eq!(MAX_FOV, camera.fov());
+    }
+
+    #[test]
+    fn if_fov_is_less_than_min_fov_set_fov_to_min_fov() {
+        let settings = Settings::new("test", 800.0, 600.0);
+        let mut camera = Camera::new(Rc::new(RefCell::new(settings)));
+
+        let fov = MIN_FOV - 1.0;
+        camera.set_fov(fov);
+
+        assert_eq!(MIN_FOV, camera.fov());
+    }
+
 }

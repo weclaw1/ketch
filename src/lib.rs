@@ -1,15 +1,6 @@
-#![cfg_attr(test, feature(proc_macro_hygiene))]
-
-#[cfg(test)]
-use mocktopus::macros::*;
-
-#[cfg_attr(test, mockable)]
 mod renderer;
-#[cfg_attr(test, mockable)]
 pub mod settings;
-#[cfg_attr(test, mockable)]
 pub mod resource;
-#[cfg_attr(test, mockable)]
 pub mod input;
 
 use std::error::Error;
