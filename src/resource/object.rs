@@ -477,7 +477,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_set_position_functions_change_model_matrix() {
+    fn test_set_position_methods_change_model_matrix() {
         let mut object = ObjectBuilder::new("test").with_position(0.0, 0.0, 0.0).build();
         let model_matrix = object.model_matrix();
 
@@ -497,5 +497,55 @@ mod tests {
         object.set_position_z(2.0);
         let model_matrix_5 = object.model_matrix();
         assert_ne!(model_matrix_4, model_matrix_5);
+    }
+
+   #[test]
+    fn test_set_rotation_methods_change_model_matrix() {
+        let mut object = ObjectBuilder::new("test").with_rotation_angle(0.0, 0.0, 0.0).build();
+        let model_matrix = object.model_matrix();
+
+        object.set_rotation_angles(1.0, 1.0, 1.0);
+        let model_matrix_2 = object.model_matrix();
+
+        assert_ne!(model_matrix, model_matrix_2);
+
+        object.set_rotation_angle_x(2.0);
+        let model_matrix_3 = object.model_matrix();
+        assert_ne!(model_matrix_2, model_matrix_3);
+
+        object.set_rotation_angle_y(2.0);
+        let model_matrix_4 = object.model_matrix();
+        assert_ne!(model_matrix_3, model_matrix_4);
+
+        object.set_rotation_angle_z(2.0);
+        let model_matrix_5 = object.model_matrix();
+        assert_ne!(model_matrix_4, model_matrix_5);
+    }
+
+   #[test]
+    fn test_set_scale_methods_change_model_matrix() {
+        let mut object = ObjectBuilder::new("test").with_scale(0.0, 0.0, 0.0).build();
+        let model_matrix = object.model_matrix();
+
+        object.set_scale(1.0);
+        let model_matrix_2 = object.model_matrix();
+
+        assert_ne!(model_matrix, model_matrix_2);
+
+        object.set_scale_x(2.0);
+        let model_matrix_3 = object.model_matrix();
+        assert_ne!(model_matrix_2, model_matrix_3);
+
+        object.set_scale_y(2.0);
+        let model_matrix_4 = object.model_matrix();
+        assert_ne!(model_matrix_3, model_matrix_4);
+
+        object.set_scale_z(2.0);
+        let model_matrix_5 = object.model_matrix();
+        assert_ne!(model_matrix_4, model_matrix_5);
+
+        object.set_scale_xyz(3.0, 3.0, 3.0);
+        let model_matrix_6 = object.model_matrix();
+        assert_ne!(model_matrix_5, model_matrix_6);
     }
 }
