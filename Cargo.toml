@@ -1,5 +1,5 @@
 [package]
-name = "bliss-engine"
+name = "ketch"
 version = "0.1.0"
 authors = ["Robert Węcławski <r.weclawski@gmail.com>"]
 edition = "2018"
