@@ -14,12 +14,14 @@ use std::rc::Rc;
 use std::path::Path;
 
 #[test]
+#[ignore]
 fn engine_is_created() {
     let settings = Settings::new("test", 600.0, 400.0);
     let _engine = Engine::new(settings);
 }
 
 #[test]
+#[ignore]
 fn surface_is_set_in_input_after_engine_creation() {
     let settings = Settings::new("test", 600.0, 400.0);
     let mut engine = Engine::new(settings);
@@ -28,6 +30,7 @@ fn surface_is_set_in_input_after_engine_creation() {
 }
 
 #[test]
+#[ignore]
 fn fetch_pending_input_does_not_panic() {
     let settings = Settings::new("test", 600.0, 400.0);
     let mut engine = Engine::new(settings);
@@ -36,6 +39,7 @@ fn fetch_pending_input_does_not_panic() {
 }
 
 #[test]
+#[ignore]
 fn render_renders_empty_frame_without_error() {
     let settings = Rc::new(RefCell::new(Settings::new("test", 600.0, 400.0)));
     let input_system = InputSystem::new(settings.clone());
@@ -47,6 +51,7 @@ fn render_renders_empty_frame_without_error() {
 }
 
 #[test]
+#[ignore]
 fn render_simple_cube_without_texture() {
     let settings = Rc::new(RefCell::new(Settings::new("test", 600.0, 400.0)));
     let input_system = InputSystem::new(settings.clone());
@@ -65,6 +70,7 @@ fn render_simple_cube_without_texture() {
 }
 
 #[test]
+#[ignore]
 fn render_simple_cube_with_texture() {
     let settings = Rc::new(RefCell::new(Settings::new("test", 600.0, 400.0)));
     let input_system = InputSystem::new(settings.clone());
