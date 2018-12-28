@@ -1,6 +1,9 @@
 language: rust
 dist: xenial
 
+before_install:
+  - sudo apt-get install -y libvulkan1 mesa-vulkan-drivers
+
 script:
   - cargo build
   - xvfb-run cargo test
