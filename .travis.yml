@@ -1,5 +1,5 @@
 language: rust
 
-before_install:
-  - sudo apt-get update
-  - sudo apt-get install -y libx11-xcb-dev libxrandr-dev
+script:
+  - cargo build
+  - xvfb-run cargo test
