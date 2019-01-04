@@ -11,6 +11,7 @@ pub struct Scene {
 
     camera: Camera,
     objects: Vec<Object>,
+    light_position: Vec3,
     light_color: Vec3,
 }
 
@@ -21,6 +22,7 @@ impl Scene {
             name: name.into(),
             camera,
             objects: Vec::new(),
+            light_position: Vec3::new(0.0, 0.0, 0.0),
             light_color: Vec3::new(1.0, 1.0, 1.0),
         }
     }
@@ -96,8 +98,18 @@ impl Scene {
         self.light_color = Vec3::new(r, g, b);
     }
 
+    pub fn set_light_position(&mut self, x: f32, y: f32, z: f32) {
+        self.light_position = Vec3::new(x, y, z);
+    }
+
+    pub fn light_position(&self) -> (f32, f32, f32) {
+        (self.light_position.x, self.light_position.y, self.light_position.z)
+    }
+
     pub fn light_data(&self) -> LightData {
         LightData {
+            _dummy0: [0; 4],
+            light_position: self.light_position.into(),
             light_color: self.light_color.into(),
         }
     }

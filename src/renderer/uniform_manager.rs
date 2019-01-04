@@ -37,6 +37,8 @@ impl UniformManager {
         );
 
         let light_data = LightData {
+            _dummy0: [0; 4],
+            light_position: Vec3::new(0.0, 0.0, 0.0).into(),
             light_color: Vec3::new(1.0, 1.0, 1.0).into(),
         };
 

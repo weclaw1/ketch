@@ -152,7 +152,15 @@ impl Camera {
             )
         };
         let aspect_ratio = (window_size.width / window_size.height) as f32;
-        glm::perspective(aspect_ratio, self.fov, near_plane, far_plane)
+
+        let correction_matrix: Mat4 = Mat4::new(1.0, 0.0, 0.0, 0.0,
+                                                0.0,-1.0, 0.0, 0.0,
+                                                0.0, 0.0, 0.5, 0.5,
+                                                0.0, 0.0, 0.0, 1.0);
+
+        let proj_matrix = glm::perspective(aspect_ratio, self.fov, near_plane, far_plane);
+
+        return correction_matrix * proj_matrix;
     }
 
     /// Returns model, view and projection matrix as uniform data. 
