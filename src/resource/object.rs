@@ -31,6 +31,8 @@ pub struct Object {
 
     model_matrix: Mat4,
 
+    light_source: bool,
+
     mesh: Option<Arc<RwLock<Mesh>>>,
 }
 
@@ -210,6 +212,16 @@ impl Object {
         (self.scale_x, self.scale_y, self.scale_z)
     }
 
+    /// Returns true if this object is a light source.
+    pub fn light_source(&self) -> bool {
+        self.light_source
+    }
+
+    /// Sets light source property.
+    pub fn set_light_source(&mut self, value: bool) {
+        self.light_source = value;
+    }
+
     /// Returns model matrix.
     pub fn model_matrix(&self) -> Mat4 {
         self.model_matrix
@@ -269,6 +281,8 @@ impl<'a> Clone for Object {
 
             model_matrix: self.model_matrix,
 
+            light_source: self.light_source,
+
             mesh: self.mesh.clone(),    
         }
     }
@@ -292,7 +306,7 @@ pub struct ObjectBuilder {
 
     translation_matrix: Mat4,
     rotation_matrix: Mat4,
-    scaling_matrix: Mat4, 
+    scaling_matrix: Mat4,
 
     mesh: Option<Arc<RwLock<Mesh>>>,
 }
@@ -440,6 +454,8 @@ impl ObjectBuilder {
             scaling_matrix: self.scaling_matrix,
 
             model_matrix: create_model_matrix(&self.translation_matrix, &self.rotation_matrix, &self.scaling_matrix),
+
+            light_source: false,
 
             mesh: self.mesh.clone(),  
         }

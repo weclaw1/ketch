@@ -1,3 +1,5 @@
+use crate::renderer::shader::fragment_shader::ty::LightData;
+use nalgebra_glm::Vec3;
 use crate::resource::object::Object;
 use crate::resource::camera::Camera;
 
@@ -9,6 +11,7 @@ pub struct Scene {
 
     camera: Camera,
     objects: Vec<Object>,
+    light_color: Vec3,
 }
 
 impl Scene {
@@ -18,6 +21,7 @@ impl Scene {
             name: name.into(),
             camera,
             objects: Vec::new(),
+            light_color: Vec3::new(1.0, 1.0, 1.0),
         }
     }
 
@@ -78,5 +82,23 @@ impl Scene {
     /// Returns a mutable reference to camera used by this scene.
     pub fn camera_mut(&mut self) -> &mut Camera {
         &mut self.camera
+    }
+
+    pub fn light_color_vec3(&self) -> Vec3 {
+        self.light_color
+    }
+
+    pub fn light_color(&self) -> (f32, f32, f32) {
+        (self.light_color.x, self.light_color.y, self.light_color.z)
+    }
+
+    pub fn set_light_color(&mut self, r: f32, g: f32, b: f32) {
+        self.light_color = Vec3::new(r, g, b);
+    }
+
+    pub fn light_data(&self) -> LightData {
+        LightData {
+            light_color: self.light_color.into(),
+        }
     }
 }

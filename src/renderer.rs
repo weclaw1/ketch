@@ -3,6 +3,7 @@ mod uniform_manager;
 pub mod shader;
 pub mod renderer_error;
 
+use crate::renderer::shader::fragment_shader::ty::PushConstants;
 use vulkano::command_buffer::AutoCommandBuffer;
 use crate::renderer::renderer_error::RenderError;
 use vulkano::framebuffer::FramebufferCreationError;
@@ -169,15 +170,22 @@ impl Renderer {
             )?;
 
         if let Some(scene) = asset_manager.active_scene() {
-            let mut uniform_data = scene.camera().as_uniform_data();
+            let mut transformation_uniform_data = scene.camera().as_uniform_data();
+            self.uniform_manager.update_light_data(scene.light_data());
 
             for object in scene.objects() {
-                uniform_data.model = object.model_matrix().into();
-                self.uniform_manager.update(uniform_data);
-                let uniform_buffer_subbuffer = self.uniform_manager.get_subbuffer_data()?;
+                transformation_uniform_data.model = object.model_matrix().into();
+                self.uniform_manager.update_transformation_data(transformation_uniform_data);
+                let transformation_data_buffer_subbuffer = self.uniform_manager.get_transformation_subbuffer_data()?;
+                let light_data_buffer_subbuffer = self.uniform_manager.get_light_subbuffer_data()?;
 
                 let descriptor_set = PersistentDescriptorSet::start(self.pipeline.clone(), 0)
-                                                             .add_buffer(uniform_buffer_subbuffer)?;
+                                                             .add_buffer(transformation_data_buffer_subbuffer)?
+                                                             .add_buffer(light_data_buffer_subbuffer)?;
+
+                let push_constants = PushConstants {
+                    light_source: object.light_source() as u32,
+                };
                     
                 if let Some(mesh) = object.mesh() {
                     let (mesh_texture, vertex_buffer, index_buffer) = {
@@ -191,7 +199,7 @@ impl Renderer {
                         vec!(vertex_buffer),
                         index_buffer, 
                         descriptor_set,
-                        (),
+                        push_constants,
                     )?;
                 }
             }
