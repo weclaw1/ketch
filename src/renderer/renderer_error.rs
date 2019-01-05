@@ -1,3 +1,4 @@
+use vulkano::command_buffer::ExecuteCommandsError;
 use vulkano::image::ImageCreationError;
 use vulkano::sync::FlushError;
 use vulkano::command_buffer::CommandBufferExecError;
@@ -54,4 +55,5 @@ pub enum RenderError {
     CommandBufferBuildError(BuildError),
     CommandBufferExecError(CommandBufferExecError),
     FlushError(FlushError),
+    ExecuteCommandsError(ExecuteCommandsError),
 }

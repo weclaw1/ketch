@@ -32,6 +32,7 @@ pub struct Object {
     model_matrix: Mat4,
 
     light_source: bool,
+    uniform_scale: bool,
 
     mesh: Option<Arc<RwLock<Mesh>>>,
 }
@@ -118,6 +119,7 @@ impl Object {
         self.scale_x = scale_x;
         self.update_scaling_matrix();
         self.update_model_matrix();
+        self.update_uniform_scale();
     }
 
     /// Sets object y scale.
@@ -125,6 +127,7 @@ impl Object {
         self.scale_y = scale_y;
         self.update_scaling_matrix();
         self.update_model_matrix();
+        self.update_uniform_scale();
     }
 
     /// Sets object z scale.
@@ -132,6 +135,7 @@ impl Object {
         self.scale_z = scale_z;
         self.update_scaling_matrix();
         self.update_model_matrix();
+        self.update_uniform_scale();
     }
 
     /// Sets object scale. With this function x, y and z is scaled by the same amount.
@@ -141,6 +145,7 @@ impl Object {
         self.scale_z = scale;
         self.update_scaling_matrix();
         self.update_model_matrix();
+        self.uniform_scale = true;
     }
 
     /// Sets object x, y and z scale.
@@ -212,6 +217,10 @@ impl Object {
         (self.scale_x, self.scale_y, self.scale_z)
     }
 
+    pub fn uniform_scale(&self) -> bool {
+        self.uniform_scale
+    }
+
     /// Returns true if this object is a light source.
     pub fn light_source(&self) -> bool {
         self.light_source
@@ -255,6 +264,10 @@ impl Object {
     fn update_model_matrix(&mut self) {
         self.model_matrix = create_model_matrix(&self.translation_matrix, &self.rotation_matrix, &self.scaling_matrix);
     }
+
+    fn update_uniform_scale(&mut self) {
+        self.uniform_scale = self.scale_x == self.scale_y && self.scale_y == self.scale_z;
+    }
 }
 
 impl<'a> Clone for Object {
@@ -282,6 +295,7 @@ impl<'a> Clone for Object {
             model_matrix: self.model_matrix,
 
             light_source: self.light_source,
+            uniform_scale: self.uniform_scale,
 
             mesh: self.mesh.clone(),    
         }
@@ -433,6 +447,7 @@ impl ObjectBuilder {
     }
 
     pub fn build(&self) -> Object {
+        let uniform_scale = self.scale_x == self.scale_y && self.scale_y == self.scale_z;
         Object {
             id: generate_id(),
             name: self.name.clone(),
@@ -456,6 +471,7 @@ impl ObjectBuilder {
             model_matrix: create_model_matrix(&self.translation_matrix, &self.rotation_matrix, &self.scaling_matrix),
 
             light_source: false,
+            uniform_scale, 
 
             mesh: self.mesh.clone(),  
         }

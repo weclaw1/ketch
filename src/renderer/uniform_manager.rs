@@ -13,6 +13,7 @@ use crate::renderer::shader::vertex_shader::ty::TransformationData;
 use crate::renderer::shader::fragment_shader::ty::LightData;
 
 /// Struct which stores uniform data and uniform buffers.
+#[derive(Clone)]
 pub struct UniformManager {
     // data used in transformations (model, view, projection matrix)
     transformation_data: TransformationData,

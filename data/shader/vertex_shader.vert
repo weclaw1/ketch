@@ -8,6 +8,11 @@ layout(location = 0) out vec2 o_tex_coord;
 layout(location = 1) out vec3 o_normal;
 layout(location = 2) out vec3 frag_position;
 
+layout(push_constant) uniform PushConstants {
+  bool light_source;
+  bool uniform_scale;
+} push_constants;
+
 //Global uniforms
 layout(set = 0, binding = 0) uniform TransformationData {
   mat4 model;
@@ -20,6 +25,11 @@ void main() {
 
   o_tex_coord = tex_coord;
 
-  o_normal = mat3(transpose(inverse(u_main.model))) * normal;
+  if(push_constants.uniform_scale) {
+    o_normal = normal;
+  } else {
+    o_normal = mat3(transpose(inverse(u_main.model))) * normal;
+  }
+  
   frag_position = vec3(u_main.model * vec4(position, 1.0));
 }

@@ -15,6 +15,7 @@ layout(binding = 2) uniform sampler2D tex;
 
 layout(push_constant) uniform PushConstants {
   bool light_source;
+  bool uniform_scale;
 } push_constants;
 
 const float AMBIENT_STRENGTH = 0.1;
