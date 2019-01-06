@@ -32,7 +32,7 @@ void main() {
   o_tex_coord = tex_coord;
 
   if(push_constants.uniform_scale) {
-    o_normal = u_main.view * normal;
+    o_normal = mat3(u_main.view * u_main.model) * normal;
   } else {
     o_normal = mat3(transpose(inverse(u_main.view * u_main.model))) * normal;
   }
