@@ -1,5 +1,4 @@
 use crate::resource::texture::Texture;
-use vulkano::buffer::BufferAccess;
 use std::sync::Arc;
 
 use vulkano::impl_vertex;

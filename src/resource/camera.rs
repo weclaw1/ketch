@@ -4,7 +4,6 @@ use std::rc::Rc;
 use crate::renderer::shader::vertex_shader::ty::TransformationData;
 use nalgebra_glm::{U3, Vec3, Mat4};
 use nalgebra_glm as glm;
-use nalgebra_glm::Dimension;
 
 const MAX_PITCH: f32 = 89.0;
 const MIN_PITCH: f32 = -89.0;

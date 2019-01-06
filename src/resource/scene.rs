@@ -50,8 +50,8 @@ impl Scene {
     pub fn remove_objects_with_name(&mut self, name: &str) -> Vec<Object> {
         let object_indexes: Vec<usize> = self.objects.iter()
                                                      .enumerate()
-                                                     .filter(|(i, x)| x.name() == name)
-                                                     .map(|(i, x)| i)
+                                                     .filter(|(_i, x)| x.name() == name)
+                                                     .map(|(i, _x)| i)
                                                      .collect();
 
         let mut removed_objects = Vec::new();

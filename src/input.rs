@@ -73,7 +73,7 @@ impl InputSystem {
             let setting_grab_cursor = settings.grab_cursor();
             if self.grab_cursor != setting_grab_cursor {
                 match window.grab_cursor(setting_grab_cursor) {
-                    Ok(res) => self.grab_cursor = setting_grab_cursor,
+                    Ok(_res) => self.grab_cursor = setting_grab_cursor,
                     Err(err) => error!("Error: {}", err),
                 }  
             }

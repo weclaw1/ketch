@@ -1,19 +1,16 @@
 use image::DynamicImage;
 use std::sync::RwLock;
-use image::RgbaImage;
 use std::path::Path;
 use vulkano::device::Device;
 use crate::resource::texture::Texture;
 use std::sync::Arc;
 use crate::resource::mesh::Vertex;
 use crate::renderer::queues::Queues;
-use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 use crate::settings::Settings;
 use std::cell::RefCell;
 use std::rc::Rc;
 use crate::resource::mesh::Mesh;
-use crate::resource::camera::Camera;
 use crate::resource::scene::Scene;
 
 pub mod mesh;
