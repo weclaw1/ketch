@@ -32,9 +32,9 @@ void main() {
   o_tex_coord = tex_coord;
 
   if(push_constants.uniform_scale) {
-    o_normal = normal;
+    o_normal = u_main.view * normal;
   } else {
-    o_normal = mat3(transpose(inverse(u_main.model))) * normal;
+    o_normal = mat3(transpose(inverse(u_main.view * u_main.model))) * normal;
   }
   
   frag_position = vec3(u_main.view * u_main.model * vec4(position, 1.0));
