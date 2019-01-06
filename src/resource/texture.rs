@@ -5,7 +5,6 @@ use vulkano::device::Queue;
 use vulkano::image::{ImmutableImage, Dimensions};
 use vulkano::sampler::{Sampler, SamplerAddressMode, Filter, MipmapMode};
 use vulkano::format::Format;
-use image::RgbaImage;
 use std::path::Path;
 
 /// Image applied on mesh

@@ -3,10 +3,6 @@ mod uniform_manager;
 pub mod shader;
 pub mod renderer_error;
 
-use crate::renderer::shader::vertex_shader::ty::TransformationData;
-use crate::resource::object::Object;
-use vulkano::device::Queue;
-use std::sync::mpsc::channel;
 use crate::renderer::shader::fragment_shader::ty::PushConstants;
 use vulkano::command_buffer::AutoCommandBuffer;
 use crate::renderer::renderer_error::RenderError;
@@ -45,8 +41,6 @@ use vulkano::swapchain;
 use vulkano_win::VkSurfaceBuild;
 
 use std::sync::Arc;
-
-use scoped_threadpool::Pool;
 
 use crate::renderer::queues::Queues;
 use crate::renderer::uniform_manager::UniformManager;
@@ -176,39 +170,42 @@ impl Renderer {
             )?;
 
         if let Some(scene) = asset_manager.active_scene() {
-            let mut thread_pool = Pool::new(num_cpus::get_physical() as u32);
-
             let mut transformation_uniform_data = scene.camera().as_uniform_data();
             self.uniform_manager.update_light_data(scene.light_data());
             
-            let (tx, rx) = channel();
-            thread_pool.scoped(|scope| {
-                for chunk in scene.objects().chunks(num_cpus::get_physical()) {
-                    let tx = tx.clone();
-                    let mut uniform_manager = self.uniform_manager.clone();
-                    let queue = self.queues.graphics_queue();
-                    let pipeline = self.pipeline.clone();
-                    let device = self.device.clone();
-                    let pipeline = self.pipeline.clone();
-                    scope.execute(move || {
-                        let secondary_command_buffer = match create_secondary_command_buffer(device, queue, pipeline, chunk, transformation_uniform_data, uniform_manager) {
-                            Ok(res) => res,
-                            Err(err) => {
-                                error!("Create command buffer error: {}", err);
-                                return;
-                            }
-                        };
-                        if let Err(err) = tx.send(secondary_command_buffer) {
-                            error!("Error when sending secondary command buffer over channel: {}", err);
-                        }
-                    })
-                }
-            });
 
-            for secondary_command_buffer in rx.recv() {
-                unsafe { command_buffer = command_buffer.execute_commands(secondary_command_buffer)?; }
+            for object in scene.objects() {
+                transformation_uniform_data.model = object.model_matrix().into();
+                self.uniform_manager.update_transformation_data(transformation_uniform_data);
+                let transformation_data_buffer_subbuffer = self.uniform_manager.get_transformation_subbuffer_data()?;
+                let light_data_buffer_subbuffer = self.uniform_manager.get_light_subbuffer_data()?;
+
+                let descriptor_set = PersistentDescriptorSet::start(self.pipeline.clone(), 0)
+                                                             .add_buffer(transformation_data_buffer_subbuffer)?
+                                                             .add_buffer(light_data_buffer_subbuffer)?;
+
+                let push_constants = PushConstants {
+                    light_source: object.light_source() as u32,
+                    uniform_scale: object.uniform_scale() as u32,
+                };
+
+                if let Some(mesh) = object.mesh() {
+                    let (mesh_texture, vertex_buffer, index_buffer) = {
+                        let mesh = mesh.read().unwrap();
+                        (mesh.texture(), mesh.vertex_buffer(), mesh.index_buffer())
+                    };
+                    let descriptor_set = descriptor_set.add_sampled_image(mesh_texture.image_buffer(), mesh_texture.sampler())?.build()?;
+                    command_buffer = command_buffer.draw_indexed(
+                        self.pipeline.clone(), 
+                        &DynamicState::none(), 
+                        vec!(vertex_buffer),
+                        index_buffer, 
+                        descriptor_set,
+                        push_constants,
+                    )?;
+                }
             }
-        }    
+        }   
 
         Ok(command_buffer.end_render_pass()?.build()?)
     }
@@ -412,47 +409,4 @@ fn create_renderpass(device: Arc<Device>, format: Format) -> Result<Arc<RenderPa
                             }
                       )?;
     Ok(Arc::new(render_pass))
-}
-
-fn create_secondary_command_buffer(device: Arc<Device>, 
-                                   queue: Arc<Queue>, 
-                                   pipeline: Arc<GraphicsPipelineAbstract + Send + Sync>, 
-                                   chunk: &[Object], 
-                                   mut transformation_data: TransformationData, 
-                                   mut uniform_manager: UniformManager) -> Result<AutoCommandBuffer, RenderError> {
-    let mut secondary_command_buffer = AutoCommandBufferBuilder::secondary_graphics_one_time_submit(device.clone(),
-                                                                                                    queue.family(),
-                                                                                                    pipeline.clone().subpass())?;
-    for object in chunk {
-        transformation_data.model = object.model_matrix().into();
-        uniform_manager.update_transformation_data(transformation_data);
-        let transformation_data_buffer_subbuffer = uniform_manager.get_transformation_subbuffer_data()?;
-        let light_data_buffer_subbuffer = uniform_manager.get_light_subbuffer_data()?;
-
-        let descriptor_set = PersistentDescriptorSet::start(pipeline.clone(), 0)
-                                                    .add_buffer(transformation_data_buffer_subbuffer)?
-                                                    .add_buffer(light_data_buffer_subbuffer)?;
-
-        let push_constants = PushConstants {
-            light_source: object.light_source() as u32,
-            uniform_scale: object.uniform_scale() as u32,
-        };
-            
-        if let Some(mesh) = object.mesh() {
-            let (mesh_texture, vertex_buffer, index_buffer) = {
-                let mesh = mesh.read().unwrap();
-                (mesh.texture(), mesh.vertex_buffer(), mesh.index_buffer())
-            };
-            let descriptor_set = descriptor_set.add_sampled_image(mesh_texture.image_buffer(), mesh_texture.sampler())?.build()?;
-            secondary_command_buffer = secondary_command_buffer.draw_indexed(
-                pipeline.clone(), 
-                &DynamicState::none(), 
-                vec!(vertex_buffer),
-                index_buffer, 
-                descriptor_set,
-                push_constants,
-            )?;
-        }
-    }
-    Ok(secondary_command_buffer.build()?)
 }
