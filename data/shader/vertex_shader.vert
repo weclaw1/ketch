@@ -37,6 +37,6 @@ void main() {
     o_normal = mat3(transpose(inverse(u_main.model))) * normal;
   }
   
-  frag_position = vec3(u_main.model * vec4(position, 1.0));
+  frag_position = vec3(u_main.view * u_main.model * vec4(position, 1.0));
   view_space_light_position = vec3(u_main.view * vec4(light_data.light_position, 1.0)); // Transform world-space light position to view-space light position
 }
