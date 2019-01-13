@@ -1,11 +1,11 @@
-use ketch::Engine;
-use ketch::settings::Settings;
-use ketch::input::InputSystem;
-use ketch::renderer::Renderer;
-use ketch::resource::AssetManager;
-use ketch::resource::camera::Camera;
-use ketch::resource::scene::Scene;
-use ketch::resource::object::ObjectBuilder;
+use ketch_engine::Engine;
+use ketch_engine::settings::Settings;
+use ketch_engine::input::InputSystem;
+use ketch_engine::renderer::Renderer;
+use ketch_engine::resource::AssetManager;
+use ketch_engine::resource::camera::Camera;
+use ketch_engine::resource::scene::Scene;
+use ketch_engine::resource::object::ObjectBuilder;
 
 mod common;
 
