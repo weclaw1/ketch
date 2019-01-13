@@ -1,0 +1,9 @@
+[package]
+name = "example"
+version = "0.1.0"
+authors = ["Robert Węcławski <r.weclawski@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+env_logger = "0.6.0"
+ketch-engine = { path = "../ketch-engine" }
