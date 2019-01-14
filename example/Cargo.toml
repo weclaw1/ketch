@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 env_logger = "0.6.0"
+ketch-core = { path = "../ketch-core" }
 ketch-engine = { path = "../ketch-engine" }

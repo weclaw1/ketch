@@ -1,4 +1,4 @@
-use ketch_engine::resource::mesh::Vertex;
+use ketch_core::resource::mesh::Vertex;
 
 pub fn generate_vertices() -> Vec<Vertex> {
     let vertices: Vec<Vertex> = vec![

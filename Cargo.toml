@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "ketch-core",
     "ketch-engine",
     "ketch-editor",
     "example",

@@ -4,20 +4,20 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::cell::Cell;
 use std::time::Duration;
-use ketch_engine::resource::AssetManager;
-use ketch_engine::settings::Settings;
+use ketch_core::resource::AssetManager;
+use ketch_core::settings::Settings;
 use ketch_engine::EventHandler;
-use ketch_engine::input::input_event::ElementState::Released;
-use ketch_engine::input::input_event::ElementState::Pressed;
+use ketch_core::input::input_event::ElementState::Released;
+use ketch_core::input::input_event::ElementState::Pressed;
 use std::path::Path;
 
-use ketch_engine::input::input_event::{InputEvent, KeyboardInput, VirtualKeyCode};
-use ketch_engine::input::InputSystem;
-use ketch_engine::resource::camera::Direction;
+use ketch_core::input::input_event::{InputEvent, KeyboardInput, VirtualKeyCode};
+use ketch_core::input::InputSystem;
+use ketch_core::resource::camera::Direction;
 use ketch_engine::Engine;
-use ketch_engine::resource::scene::Scene;
-use ketch_engine::resource::camera::Camera;
-use ketch_engine::resource::object::ObjectBuilder;
+use ketch_core::resource::scene::Scene;
+use ketch_core::resource::camera::Camera;
+use ketch_core::resource::object::ObjectBuilder;
 
 pub struct GameInput {
     mouse_delta_changed: bool,

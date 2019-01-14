@@ -1,14 +1,10 @@
-pub mod renderer;
-pub mod settings;
-pub mod resource;
-pub mod input;
-
+use ketch_editor::Editor;
 use std::error::Error;
-use crate::input::input_event::InputEvent;
-use crate::resource::AssetManager;
-use crate::renderer::{Renderer};
-use crate::settings::Settings;
-use crate::input::InputSystem;
+use ketch_core::input::input_event::InputEvent;
+use ketch_core::resource::AssetManager;
+use ketch_core::renderer::{Renderer};
+use ketch_core::settings::Settings;
+use ketch_core::input::InputSystem;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -34,6 +30,7 @@ pub struct Engine {
     renderer: Renderer,
     asset_manager: AssetManager,
     input_system: InputSystem,
+    editor: Option<Editor>,
     settings: Rc<RefCell<Settings>>,
 }
 
@@ -43,6 +40,13 @@ impl Engine {
         let opts = Opts::from_args();
         settings.set_gui_editor(opts.gui_editor);
         let settings = Rc::new(RefCell::new(settings));
+
+        let editor = if opts.gui_editor {
+            Some(Editor::new(settings.clone()))
+        } else {
+            None
+        };
+
         let mut input_system = InputSystem::new(settings.clone());
         let renderer = match Renderer::new(settings.clone(), input_system.events_loop()) {
             Ok(renderer) => renderer,
@@ -60,6 +64,7 @@ impl Engine {
             asset_manager,
             input_system,
             settings,
+            editor,
         }
     }
 

@@ -8,7 +8,7 @@ use conrod_core::position::Dimension;
 use crate::widget_ids::Ids;
 use conrod_core::Ui;
 use conrod_core::widget;
-use ketch_engine::settings::Settings;
+use ketch_core::settings::Settings;
 use std::cell::RefCell;
 use std::rc::Rc;
 
