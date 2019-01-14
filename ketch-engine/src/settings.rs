@@ -12,6 +12,7 @@ pub struct Settings {
     far_plane: f32,
     grab_cursor: bool,
     hide_cursor: bool,
+    gui_editor: bool,
 }
 
 impl Settings {
@@ -27,6 +28,7 @@ impl Settings {
             far_plane: 1000.0,
             grab_cursor: false,
             hide_cursor: false,
+            gui_editor: false,
         }
     }
 
@@ -113,5 +115,13 @@ impl Settings {
     /// Returns duration between game fps logs.
     pub fn log_fps_frequency(&self) -> Duration {
         self.log_fps_frequency
+    }
+
+    pub fn set_gui_editor(&mut self, value: bool) {
+        self.gui_editor = value;
+    }
+
+    pub fn gui_editor(&self) -> bool {
+        self.gui_editor
     }
 }

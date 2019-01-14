@@ -16,7 +16,17 @@ use std::time::{Duration, Instant};
 
 use fps_counter::FPSCounter;
 
+use structopt::StructOpt;
+
 use log::*;
+
+#[derive(StructOpt, Debug)]
+#[structopt(name = "basic")]
+struct Opts {
+    /// Activate GUI Editor
+    #[structopt(short = "g", long = "gui-editor")]
+    gui_editor: bool,
+}
 
 /// A struct representing the top level of this engine.
 /// It provides access to all the subsystems that can be used.
@@ -29,7 +39,9 @@ pub struct Engine {
 
 impl Engine {
     /// Creates and returns a new instance of this engine.
-    pub fn new(settings: Settings) -> Self {
+    pub fn new(mut settings: Settings) -> Self {
+        let opts = Opts::from_args();
+        settings.set_gui_editor(opts.gui_editor);
         let settings = Rc::new(RefCell::new(settings));
         let mut input_system = InputSystem::new(settings.clone());
         let renderer = match Renderer::new(settings.clone(), input_system.events_loop()) {

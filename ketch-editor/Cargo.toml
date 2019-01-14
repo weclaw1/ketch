@@ -5,3 +5,7 @@ authors = ["Robert Węcławski <r.weclawski@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+conrod_core = "0.62.0"
+conrod_vulkano = "0.62.0"
+conrod_winit = "0.62.0"
+ketch-engine = { path = "../ketch-engine" }
