@@ -1,3 +1,5 @@
+use vulkano::command_buffer::AutoCommandBufferBuilder;
+use ketch_core::renderer::Renderer;
 use image::DynamicImage;
 use image::open;
 use conrod_core::render::Primitives;
@@ -15,25 +17,39 @@ use std::rc::Rc;
 mod widget_ids;
 
 pub struct Editor {
+    settings: Rc<RefCell<Settings>>,
     ui: Ui,
     widget_ids: Ids,
-    image_map: conrod_core::image::Map<DynamicImage>,
+    conrod_renderer: conrod_vulkano::Renderer,
+    image_map: conrod_core::image::Map<conrod_vulkano::Image>,
 }
 
 impl Editor {
-    pub fn new(settings: Rc<RefCell<Settings>>) -> Self {
-        let (window_width, window_height) = {
+    pub fn new(settings: Rc<RefCell<Settings>>, renderer: &Renderer) -> Self {
+        let (window_width, window_height, dpi) = {
             let settings = settings.borrow();
-            (settings.window_size().width, settings.window_size().height)
+            (settings.window_size().width, settings.window_size().height, settings.dpi())
         };
+
+        let subpass = vulkano::framebuffer::Subpass::from(renderer.render_pass(), 0).expect("Couldn't create subpass for GUI!");
+        let conrod_renderer = conrod_vulkano::Renderer::new(
+            renderer.device(),
+            subpass,
+            renderer.queues().graphics_queue().family(),
+            [window_width as u32, window_height as u32],
+            dpi,
+        ).unwrap();
+
         let mut ui = conrod_core::UiBuilder::new([window_width, window_height]).theme(Editor::theme()).build();
         let widget_ids = widget_ids::Ids::new(ui.widget_id_generator());
         let image_map = conrod_core::image::Map::new();
         ui.fonts.insert_from_file("ketch-editor/assets/fonts/NotoSans-Regular.ttf").unwrap();
 
         Editor {
+            settings,
             ui,
             widget_ids,
+            conrod_renderer,
             image_map,
         }
     }
@@ -76,6 +92,46 @@ impl Editor {
 
     pub fn draw_ui(&self) -> Primitives {
         self.ui.draw()
+    }
+
+    pub fn conrod_renderer_mut(&mut self) -> &mut conrod_vulkano::Renderer {
+        &mut self.conrod_renderer
+    }
+
+    pub fn image_map(&self) -> &conrod_core::image::Map<DynamicImage> {
+        &self.image_map
+    }
+
+    pub fn create_gui_command_buffer(&mut self, renderer: &Renderer) -> AutoCommandBufferBuilder {
+        let mut command_buffer_builder = AutoCommandBufferBuilder::primary_one_time_submit(
+            renderer.device(), 
+            renderer.queues().graphics_queue().family(),
+        ).expect("Failed to create AutoCommandBufferBuilder");
+
+        let primitives = self.ui.draw();
+
+        let (window_width, window_height, dpi) = {
+            let settings = self.settings.borrow();
+            (settings.window_size().width, settings.window_size().height, settings.dpi())
+        };
+
+        let viewport = [0.0, 0.0, window_width as f32, window_height as f32];
+        let mut cmds = self.conrod_renderer.fill(&self.image_map, viewport, dpi, primitives).unwrap();
+
+        for cmd in cmds.commands.drain(..) {
+            let buffer = cmds.glyph_cpu_buffer_pool.chunk(cmd.data.iter().cloned()).unwrap();
+            command_buffer_builder = command_buffer_builder.copy_buffer_to_image_dimensions(
+                buffer,
+                cmds.glyph_cache_texture.clone(),
+                [cmd.offset[0], cmd.offset[1], 0],
+                [cmd.size[0], cmd.size[1], 1],
+                0,
+                1,
+                0
+            ).expect("Failed to submit command for caching glyph");
+        }
+
+        command_buffer_builder = command_buffer_builder.begin_render_pass(framebuffer: F, secondary: bool, clear_values: C)
     }
 }
 

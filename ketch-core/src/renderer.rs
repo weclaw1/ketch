@@ -240,6 +240,10 @@ impl Renderer {
         self.surface.clone()
     }
 
+    pub fn render_pass(&self) -> Arc<RenderPassAbstract + Send + Sync> {
+        self.render_pass.clone()
+    }
+
 }
 
 /// Creates framebuffers, which contain list of images that are attached.

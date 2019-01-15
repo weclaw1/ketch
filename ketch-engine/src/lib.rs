@@ -41,12 +41,6 @@ impl Engine {
         settings.set_gui_editor(opts.gui_editor);
         let settings = Rc::new(RefCell::new(settings));
 
-        let editor = if opts.gui_editor {
-            Some(Editor::new(settings.clone()))
-        } else {
-            None
-        };
-
         let mut input_system = InputSystem::new(settings.clone());
         let renderer = match Renderer::new(settings.clone(), input_system.events_loop()) {
             Ok(renderer) => renderer,
@@ -58,6 +52,12 @@ impl Engine {
         };
         input_system.set_surface(renderer.surface());
         let asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
+
+        let editor = if opts.gui_editor {
+            Some(Editor::new(settings.clone(), &renderer))
+        } else {
+            None
+        };
         
         Engine {
             renderer,
