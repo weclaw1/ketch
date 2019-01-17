@@ -1,7 +1,9 @@
+use ketch_core::input::input_event::Event;
+use winit::Window;
+use ketch_core::input::input_event::InputEvent;
+use conrod_vulkano::Image;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use ketch_core::renderer::Renderer;
-use image::DynamicImage;
-use image::open;
 use conrod_core::render::Primitives;
 use conrod_core::position::Positionable;
 use conrod_core::widget::Widget;
@@ -98,11 +100,19 @@ impl Editor {
         &mut self.conrod_renderer
     }
 
-    pub fn image_map(&self) -> &conrod_core::image::Map<DynamicImage> {
+    pub fn image_map(&self) -> &conrod_core::image::Map<Image> {
         &self.image_map
     }
 
-    pub fn create_gui_command_buffer(&mut self, renderer: &Renderer) -> AutoCommandBufferBuilder {
+    pub fn handle_input(&mut self, window: &Window, input_events: Vec<Event>) {
+        input_events.into_iter().filter_map(|event| conrod_winit::convert_event(event, window))
+                                .for_each(|event| self.ui.handle_event(event));
+        if self.ui.global_input().events().next().is_some() {
+            self.gui();
+        }
+    }
+
+    pub fn create_gui_command_buffer(&mut self, renderer: &Renderer, image_num: usize) -> AutoCommandBufferBuilder {
         let mut command_buffer_builder = AutoCommandBufferBuilder::primary_one_time_submit(
             renderer.device(), 
             renderer.queues().graphics_queue().family(),
@@ -131,7 +141,39 @@ impl Editor {
             ).expect("Failed to submit command for caching glyph");
         }
 
-        command_buffer_builder = command_buffer_builder.begin_render_pass(framebuffer: F, secondary: bool, clear_values: C)
+        command_buffer_builder = command_buffer_builder
+            .begin_render_pass(
+                renderer.framebuffer(image_num), 
+                false, 
+                vec![
+                    [0.0, 0.0, 0.0, 1.0].into(),
+                    1f32.into(),
+                ]
+            ).expect("Failed to begin render pass!");
+
+        let draw_cmds = self.conrod_renderer.draw(
+            renderer.queues().graphics_queue(),
+            &self.image_map,
+            viewport,
+        ).unwrap();
+        for cmd in draw_cmds {
+            let conrod_vulkano::DrawCommand {
+                graphics_pipeline,
+                dynamic_state,
+                vertex_buffer,
+                descriptor_set,
+            } = cmd;
+            command_buffer_builder = command_buffer_builder
+                .draw(
+                    graphics_pipeline,
+                    &dynamic_state,
+                    vec![vertex_buffer],
+                    descriptor_set,
+                    (),
+                )
+                .expect("failed to submit draw command");
+        }
+        command_buffer_builder
     }
 }
 

@@ -56,16 +56,7 @@ impl InputSystem {
         self.surface.as_ref().map(|x| x.window())
     }
 
-    /// Fetches pending input.
-    pub fn fetch_pending_input(&mut self) -> Vec<InputEvent> {
-        let events = self.load_events();
-
-        events.into_iter()
-              .filter_map(|event| input_event::to_input_event(event))
-              .collect()
-    }
-
-    fn load_events(&mut self) -> Vec<Event> {
+    pub fn fetch_pending_events(&mut self) -> Vec<Event> {
         let mut events = Vec::new();
         let mut settings = self.settings.borrow_mut();
 
@@ -104,4 +95,10 @@ impl InputSystem {
 
         events
     }
+}
+
+pub fn convert_to_input_events(events: Vec<Event>) -> Vec<InputEvent> {
+    events.into_iter()
+          .filter_map(|event| input_event::to_input_event(event))
+          .collect()
 }

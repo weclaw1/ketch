@@ -3,6 +3,7 @@ mod uniform_manager;
 pub mod shader;
 pub mod renderer_error;
 
+use vulkano::swapchain::SwapchainAcquireFuture;
 use crate::renderer::shader::fragment_shader::ty::PushConstants;
 use vulkano::command_buffer::AutoCommandBuffer;
 use crate::renderer::renderer_error::RenderError;
@@ -115,8 +116,7 @@ impl Renderer {
         })
     }
 
-    /// Renders one frame using active scene from asset manager.
-    pub fn render(&mut self, asset_manager: &mut AssetManager) -> Result<(), RenderError> {
+    pub fn prepare_frame(&mut self) -> Result<(usize, SwapchainAcquireFuture<Window>), RenderError> {
         if let Some(previous_frame) = &mut self.previous_frame {
             previous_frame.cleanup_finished();
         }
@@ -134,7 +134,16 @@ impl Renderer {
             Err(err) => return Err(RenderError::AcquireError(err)),
         };
 
-        let command_buffer = self.create_command_buffer(image_num, asset_manager)?;
+        Ok((image_num, acquire_future))
+    }
+
+    /// Renders one frame using active scene from asset manager.
+    pub fn render(&mut self, 
+                  asset_manager: &mut AssetManager, 
+                  image_num: usize, 
+                  acquire_future: SwapchainAcquireFuture<Window>,
+                  editor_command_buffer: Option<AutoCommandBufferBuilder>) -> Result<(), RenderError> {
+        let command_buffer = self.create_command_buffer(image_num, asset_manager, editor_command_buffer)?;
 
         let future = self.previous_frame.take()
                                         .unwrap_or_else(|| Box::new(sync::now(self.device.clone())) as Box<_>)
@@ -159,15 +168,19 @@ impl Renderer {
     }
 
     /// Creates command buffer using active scene in asset manager.
-    fn create_command_buffer(&mut self, image_num: usize, asset_manager: &mut AssetManager) -> Result<AutoCommandBuffer, RenderError> {
-        let mut command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queues.graphics_queue().family())?
-            .begin_render_pass(
-                self.framebuffers[image_num].clone(), false,
-                vec![
-                    [0.0, 0.0, 0.0, 1.0].into(),
-                    1f32.into(),
-                ]
-            )?;
+    fn create_command_buffer(&mut self, image_num: usize, asset_manager: &mut AssetManager, editor_command_buffer: Option<AutoCommandBufferBuilder>) -> Result<AutoCommandBuffer, RenderError> {
+        let mut command_buffer = if let Some(editor_command_buffer) = editor_command_buffer {
+            editor_command_buffer
+        } else {
+            AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queues.graphics_queue().family())?
+                .begin_render_pass(
+                    self.framebuffers[image_num].clone(), false,
+                    vec![
+                        [0.0, 0.0, 0.0, 1.0].into(),
+                        1f32.into(),
+                    ]
+                )?
+        };
 
         if let Some(scene) = asset_manager.active_scene() {
             let mut transformation_uniform_data = scene.camera().as_uniform_data();
@@ -242,6 +255,10 @@ impl Renderer {
 
     pub fn render_pass(&self) -> Arc<RenderPassAbstract + Send + Sync> {
         self.render_pass.clone()
+    }
+
+    pub fn framebuffer(&self, image_num: usize) -> Arc<FramebufferAbstract + Send + Sync> {
+        self.framebuffers[image_num].clone()
     }
 
 }

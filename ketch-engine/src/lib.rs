@@ -5,6 +5,7 @@ use ketch_core::resource::AssetManager;
 use ketch_core::renderer::{Renderer};
 use ketch_core::settings::Settings;
 use ketch_core::input::InputSystem;
+use ketch_core::input;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -98,8 +99,13 @@ impl Engine {
             let elapsed = previous_time.elapsed();
             previous_time = Instant::now();
             lag += elapsed;
+            
+            let pending_events = self.input_system.fetch_pending_events();
 
-            state.process_input(self.input_system.fetch_pending_input());
+            if let Some(editor) = &mut self.editor {
+                editor.handle_input(self.input_system.window().unwrap(), pending_events.clone());
+            }
+            state.process_input(input::convert_to_input_events(pending_events));
 
             while lag >= time_per_update {
                 state.update(&mut self.settings.borrow_mut(), &mut self.asset_manager, time_per_update);
@@ -107,7 +113,21 @@ impl Engine {
                 lag -= time_per_update;
             }
 
-            match self.renderer.render(&mut self.asset_manager) {
+            let (image_num, acquire_future) = match self.renderer.prepare_frame() {
+                Ok(res) => res,
+                Err(err) => {
+                    error!("Couldn't prepare frame: {}", err);
+                    continue;
+                }
+            };
+
+            let mut editor_command_buffer = None;
+
+            if let Some(editor) = &mut self.editor {
+                editor_command_buffer = Some(editor.create_gui_command_buffer(&self.renderer, image_num));
+            }
+
+            match self.renderer.render(&mut self.asset_manager, image_num, acquire_future, editor_command_buffer) {
                 Ok(()) => {
                     let fps = fps_counter.tick();
                     if last_fps_counter_log.elapsed() >= log_fps_frequency {

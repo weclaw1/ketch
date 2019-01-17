@@ -31,11 +31,11 @@ fn surface_is_set_in_input_after_engine_creation() {
 
 #[test]
 #[ignore]
-fn fetch_pending_input_does_not_panic() {
+fn fetch_pending_events_does_not_panic() {
     let settings = Settings::new("test", 600.0, 400.0);
     let mut engine = Engine::new(settings);
 
-    let _input = engine.input_system_mut().fetch_pending_input();
+    let _input = engine.input_system_mut().fetch_pending_events();
 }
 
 #[test]
@@ -46,8 +46,11 @@ fn render_renders_empty_frame_without_error() {
     
     let mut renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
     let mut asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
+    let prepare_frame_result = renderer.prepare_frame();
+    assert!(prepare_frame_result.is_ok());
 
-    assert!(renderer.render(&mut asset_manager).is_ok())
+    let (image_num, acquire_future) = prepare_frame_result.unwrap();
+    assert!(renderer.render(&mut asset_manager, image_num, acquire_future, None).is_ok());
 }
 
 #[test]
@@ -66,7 +69,11 @@ fn render_simple_cube_without_texture() {
     let object = ObjectBuilder::new("test_object").with_mesh(asset_manager.mesh("test_mesh").unwrap()).build();
     asset_manager.active_scene_mut().unwrap().add_object(object);
 
-    assert!(renderer.render(&mut asset_manager).is_ok())
+    let prepare_frame_result = renderer.prepare_frame();
+    assert!(prepare_frame_result.is_ok());
+
+    let (image_num, acquire_future) = prepare_frame_result.unwrap();
+    assert!(renderer.render(&mut asset_manager, image_num, acquire_future, None).is_ok());
 }
 
 #[test]
@@ -88,6 +95,10 @@ fn render_simple_cube_with_texture() {
     let object = ObjectBuilder::new("test_object").with_mesh(asset_manager.mesh("test_mesh").unwrap()).build();
     asset_manager.active_scene_mut().unwrap().add_object(object);
 
-    assert!(renderer.render(&mut asset_manager).is_ok())
+    let prepare_frame_result = renderer.prepare_frame();
+    assert!(prepare_frame_result.is_ok());
+
+    let (image_num, acquire_future) = prepare_frame_result.unwrap();
+    assert!(renderer.render(&mut asset_manager, image_num, acquire_future, None).is_ok());
 }
 

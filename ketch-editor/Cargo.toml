@@ -9,5 +9,6 @@ vulkano = "0.11.1"
 conrod_core = "0.62.0"
 conrod_vulkano = "0.62.0"
 conrod_winit = "0.62.0"
+winit = "0.18"
 image = "0.21.0"
 ketch-core = { path = "../ketch-core" }
