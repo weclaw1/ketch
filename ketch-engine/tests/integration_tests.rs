@@ -46,11 +46,11 @@ fn render_renders_empty_frame_without_error() {
     
     let mut renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
     let mut asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
-    let prepare_frame_result = renderer.prepare_frame();
-    assert!(prepare_frame_result.is_ok());
+    let render_result = renderer.render(&mut asset_manager);
+    assert!(render_result.is_ok());
 
-    let (image_num, acquire_future) = prepare_frame_result.unwrap();
-    assert!(renderer.render(&mut asset_manager, image_num, acquire_future, None).is_ok());
+    let (image_num, acquire_future, command_buffer) = render_result.unwrap();
+    assert!(renderer.execute_command_buffer(image_num, acquire_future, command_buffer).is_ok());
 }
 
 #[test]
@@ -69,11 +69,11 @@ fn render_simple_cube_without_texture() {
     let object = ObjectBuilder::new("test_object").with_mesh(asset_manager.mesh("test_mesh").unwrap()).build();
     asset_manager.active_scene_mut().unwrap().add_object(object);
 
-    let prepare_frame_result = renderer.prepare_frame();
-    assert!(prepare_frame_result.is_ok());
+    let render_result = renderer.render(&mut asset_manager);
+    assert!(render_result.is_ok());
 
-    let (image_num, acquire_future) = prepare_frame_result.unwrap();
-    assert!(renderer.render(&mut asset_manager, image_num, acquire_future, None).is_ok());
+    let (image_num, acquire_future, command_buffer) = render_result.unwrap();
+    assert!(renderer.execute_command_buffer(image_num, acquire_future, command_buffer).is_ok());
 }
 
 #[test]
@@ -95,10 +95,10 @@ fn render_simple_cube_with_texture() {
     let object = ObjectBuilder::new("test_object").with_mesh(asset_manager.mesh("test_mesh").unwrap()).build();
     asset_manager.active_scene_mut().unwrap().add_object(object);
 
-    let prepare_frame_result = renderer.prepare_frame();
-    assert!(prepare_frame_result.is_ok());
+    let render_result = renderer.render(&mut asset_manager);
+    assert!(render_result.is_ok());
 
-    let (image_num, acquire_future) = prepare_frame_result.unwrap();
-    assert!(renderer.render(&mut asset_manager, image_num, acquire_future, None).is_ok());
+    let (image_num, acquire_future, command_buffer) = render_result.unwrap();
+    assert!(renderer.execute_command_buffer(image_num, acquire_future, command_buffer).is_ok());
 }
 

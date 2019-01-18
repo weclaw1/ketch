@@ -113,21 +113,19 @@ impl Engine {
                 lag -= time_per_update;
             }
 
-            let (image_num, acquire_future) = match self.renderer.prepare_frame() {
+            let (image_num, acquire_future, mut command_buffer) = match self.renderer.render(&mut self.asset_manager) {
                 Ok(res) => res,
                 Err(err) => {
-                    error!("Couldn't prepare frame: {}", err);
+                    error!("Couldn't render frame: {}", err);
                     continue;
                 }
             };
 
-            let mut editor_command_buffer = None;
-
             if let Some(editor) = &mut self.editor {
-                editor_command_buffer = Some(editor.create_gui_command_buffer(&self.renderer, image_num));
+                command_buffer = editor.create_gui_command_buffer(self.renderer.queues().graphics_queue(), command_buffer, image_num);
             }
 
-            match self.renderer.render(&mut self.asset_manager, image_num, acquire_future, editor_command_buffer) {
+            match self.renderer.execute_command_buffer(image_num, acquire_future, command_buffer) {
                 Ok(()) => {
                     let fps = fps_counter.tick();
                     if last_fps_counter_log.elapsed() >= log_fps_frequency {
@@ -135,7 +133,7 @@ impl Engine {
                         last_fps_counter_log = Instant::now();
                     }
                 },
-                Err(err) => error!("Couldn't render frame: {}", err),
+                Err(err) => error!("Couldn't execute command buffer for frame: {}", err),
             }
         }
     }

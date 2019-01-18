@@ -1,3 +1,5 @@
+use vulkano::device::Queue;
+use std::sync::Arc;
 use ketch_core::input::input_event::Event;
 use winit::Window;
 use ketch_core::input::input_event::InputEvent;
@@ -8,7 +10,10 @@ use conrod_core::render::Primitives;
 use conrod_core::position::Positionable;
 use conrod_core::widget::Widget;
 use conrod_core::position::Sizeable;
+use conrod_core::position::Position;
 use conrod_core::position::Dimension;
+use conrod_core::position::Align;
+use conrod_core::position::Relative;
 use crate::widget_ids::Ids;
 use conrod_core::Ui;
 use conrod_core::widget;
@@ -84,7 +89,8 @@ impl Editor {
         let window_width = self.ui.win_w;
         let mut ui = self.ui.set_widgets();
 
-        widget::Canvas::new().x_dimension(Dimension::Absolute(window_width / 3.0))
+        widget::Canvas::new().x_position(Position::Relative(Relative::Align(Align::Start), None))
+                             .x_dimension(Dimension::Absolute(window_width / 3.0))
                              .pad(MARGIN)
                              .scroll_kids_vertically()
                              .set(self.widget_ids.canvas, &mut ui);
@@ -112,12 +118,7 @@ impl Editor {
         }
     }
 
-    pub fn create_gui_command_buffer(&mut self, renderer: &Renderer, image_num: usize) -> AutoCommandBufferBuilder {
-        let mut command_buffer_builder = AutoCommandBufferBuilder::primary_one_time_submit(
-            renderer.device(), 
-            renderer.queues().graphics_queue().family(),
-        ).expect("Failed to create AutoCommandBufferBuilder");
-
+    pub fn create_gui_command_buffer(&mut self, queue: Arc<Queue>, mut command_buffer_builder: AutoCommandBufferBuilder, image_num: usize) -> AutoCommandBufferBuilder {
         let primitives = self.ui.draw();
 
         let (window_width, window_height, dpi) = {
@@ -141,18 +142,8 @@ impl Editor {
             ).expect("Failed to submit command for caching glyph");
         }
 
-        command_buffer_builder = command_buffer_builder
-            .begin_render_pass(
-                renderer.framebuffer(image_num), 
-                false, 
-                vec![
-                    [0.0, 0.0, 0.0, 1.0].into(),
-                    1f32.into(),
-                ]
-            ).expect("Failed to begin render pass!");
-
         let draw_cmds = self.conrod_renderer.draw(
-            renderer.queues().graphics_queue(),
+            queue,
             &self.image_map,
             viewport,
         ).unwrap();
