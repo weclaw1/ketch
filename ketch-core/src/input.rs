@@ -82,10 +82,6 @@ impl InputSystem {
             match &input_event {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::CloseRequested => std::process::exit(0),
-                    WindowEvent::Resized(logical_size) => {
-                        let dpi = settings.dpi();
-                        settings.set_window_size(logical_size.to_physical(dpi));
-                    },
                     WindowEvent::HiDpiFactorChanged(dpi) => settings.set_dpi(*dpi),
                     _ => events.push(input_event),
                 },

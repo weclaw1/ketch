@@ -46,7 +46,10 @@ fn render_renders_empty_frame_without_error() {
     
     let mut renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
     let mut asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
-    let render_result = renderer.render(&mut asset_manager);
+    let command_buffer_result = renderer.create_command_buffer();
+    assert!(command_buffer_result.is_ok());
+    let command_buffer = command_buffer_result.unwrap();
+    let render_result = renderer.render_scene(command_buffer, &mut asset_manager);
     assert!(render_result.is_ok());
 
     let (image_num, acquire_future, command_buffer) = render_result.unwrap();
@@ -68,8 +71,11 @@ fn render_simple_cube_without_texture() {
     asset_manager.set_active_scene(Scene::new("test_scene", camera));
     let object = ObjectBuilder::new("test_object").with_mesh(asset_manager.mesh("test_mesh").unwrap()).build();
     asset_manager.active_scene_mut().unwrap().add_object(object);
-
-    let render_result = renderer.render(&mut asset_manager);
+    
+    let command_buffer_result = renderer.create_command_buffer();
+    assert!(command_buffer_result.is_ok());
+    let command_buffer = command_buffer_result.unwrap();
+    let render_result = renderer.render_scene(command_buffer, &mut asset_manager);
     assert!(render_result.is_ok());
 
     let (image_num, acquire_future, command_buffer) = render_result.unwrap();
@@ -94,8 +100,11 @@ fn render_simple_cube_with_texture() {
     asset_manager.set_active_scene(Scene::new("test_scene", camera));
     let object = ObjectBuilder::new("test_object").with_mesh(asset_manager.mesh("test_mesh").unwrap()).build();
     asset_manager.active_scene_mut().unwrap().add_object(object);
-
-    let render_result = renderer.render(&mut asset_manager);
+    
+    let command_buffer_result = renderer.create_command_buffer();
+    assert!(command_buffer_result.is_ok());
+    let command_buffer = command_buffer_result.unwrap();
+    let render_result = renderer.render_scene(command_buffer, &mut asset_manager);
     assert!(render_result.is_ok());
 
     let (image_num, acquire_future, command_buffer) = render_result.unwrap();

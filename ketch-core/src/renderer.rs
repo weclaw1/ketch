@@ -117,7 +117,7 @@ impl Renderer {
     }
 
     /// Renders one frame using active scene from asset manager.
-    pub fn render(&mut self, asset_manager: &mut AssetManager) -> Result<(usize, SwapchainAcquireFuture<winit::Window>, AutoCommandBufferBuilder), RenderError> {
+    pub fn render_scene(&mut self, command_buffer: AutoCommandBufferBuilder, asset_manager: &mut AssetManager) -> Result<(usize, SwapchainAcquireFuture<winit::Window>, AutoCommandBufferBuilder), RenderError> {
         if let Some(previous_frame) = &mut self.previous_frame {
             previous_frame.cleanup_finished();
         }
@@ -135,11 +135,12 @@ impl Renderer {
             Err(err) => return Err(RenderError::AcquireError(err)),
         };
 
-        let command_buffer = self.create_command_buffer(image_num, asset_manager)?;
+        let command_buffer = self.add_scene_commands(command_buffer, image_num, asset_manager)?;
 
         Ok((image_num, acquire_future, command_buffer))
     }
 
+    /// Executes commands stored in command buffer.
     pub fn execute_command_buffer(&mut self, image_num: usize, acquire_future: SwapchainAcquireFuture<winit::Window>, command_buffer: AutoCommandBufferBuilder) -> Result<(), RenderError> {
         let command_buffer = command_buffer.end_render_pass()?.build()?;
         
@@ -165,16 +166,20 @@ impl Renderer {
         }   
     }
 
-    /// Creates command buffer using active scene in asset manager.
-    fn create_command_buffer(&mut self, image_num: usize, asset_manager: &mut AssetManager) -> Result<AutoCommandBufferBuilder, RenderError> {
-        let mut command_buffer = AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queues.graphics_queue().family())?
-            .begin_render_pass(
-                self.framebuffers[image_num].clone(), false,
-                vec![
-                    [0.0, 0.0, 0.0, 1.0].into(),
-                    1f32.into(),
-                ]
-            )?;
+    /// Creates vulkan command buffer.
+    pub fn create_command_buffer(&mut self) -> Result<AutoCommandBufferBuilder, RenderError> {
+        Ok(AutoCommandBufferBuilder::primary_one_time_submit(self.device.clone(), self.queues.graphics_queue().family())?)
+    }
+
+    /// Adds commands used to draw current scene to command buffer.
+    fn add_scene_commands(&mut self, mut command_buffer: AutoCommandBufferBuilder, image_num: usize, asset_manager: &mut AssetManager) -> Result<AutoCommandBufferBuilder, RenderError> {
+        command_buffer = command_buffer.begin_render_pass(
+            self.framebuffers[image_num].clone(), false,
+            vec![
+                [0.0, 0.0, 0.0, 1.0].into(),
+                1f32.into(),
+            ]
+        )?;
 
         if let Some(scene) = asset_manager.active_scene() {
             let mut transformation_uniform_data = scene.camera().as_uniform_data();

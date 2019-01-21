@@ -86,7 +86,7 @@ impl Editor {
     pub fn gui(&mut self) {
         const MARGIN: conrod_core::Scalar = 30.0;
 
-        let window_width = self.ui.win_w;
+        let window_width = self.settings.borrow().window_size().width;
         let mut ui = self.ui.set_widgets();
 
         widget::Canvas::new().x_position(Position::Relative(Relative::Align(Align::Start), None))
@@ -118,9 +118,8 @@ impl Editor {
         }
     }
 
-    pub fn create_gui_command_buffer(&mut self, queue: Arc<Queue>, mut command_buffer_builder: AutoCommandBufferBuilder, image_num: usize) -> AutoCommandBufferBuilder {
+    pub fn add_glyph_commands(&mut self, mut command_buffer_builder: AutoCommandBufferBuilder) -> AutoCommandBufferBuilder {
         let primitives = self.ui.draw();
-
         let (window_width, window_height, dpi) = {
             let settings = self.settings.borrow();
             (settings.window_size().width, settings.window_size().height, settings.dpi())
@@ -141,6 +140,17 @@ impl Editor {
                 0
             ).expect("Failed to submit command for caching glyph");
         }
+
+        command_buffer_builder
+    }
+
+    pub fn add_draw_commands(&mut self, queue: Arc<Queue>, mut command_buffer_builder: AutoCommandBufferBuilder) -> AutoCommandBufferBuilder {
+        let (window_width, window_height) = {
+            let settings = self.settings.borrow();
+            (settings.window_size().width, settings.window_size().height)
+        };
+
+        let viewport = [0.0, 0.0, window_width as f32, window_height as f32];
 
         let draw_cmds = self.conrod_renderer.draw(
             queue,

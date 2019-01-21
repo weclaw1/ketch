@@ -113,16 +113,30 @@ impl Engine {
                 lag -= time_per_update;
             }
 
-            let (image_num, acquire_future, mut command_buffer) = match self.renderer.render(&mut self.asset_manager) {
+            let mut command_buffer = match self.renderer.create_command_buffer() {
                 Ok(res) => res,
                 Err(err) => {
-                    error!("Couldn't render frame: {}", err);
+                    error!("Couldn't create command buffer: {}", err);
+                    error!("Caused by: {}", err.cause().unwrap());
                     continue;
                 }
             };
 
             if let Some(editor) = &mut self.editor {
-                command_buffer = editor.create_gui_command_buffer(self.renderer.queues().graphics_queue(), command_buffer, image_num);
+                command_buffer = editor.add_glyph_commands(command_buffer);
+            }
+
+            let (image_num, acquire_future, mut command_buffer) = match self.renderer.render_scene(command_buffer, &mut self.asset_manager) {
+                Ok(res) => res,
+                Err(err) => {
+                    error!("Couldn't render scene: {}", err);
+                    error!("Caused by: {}", err.cause().unwrap());
+                    continue;
+                }
+            };
+
+            if let Some(editor) = &mut self.editor {
+                command_buffer = editor.add_draw_commands(self.renderer.queues().graphics_queue(), command_buffer);
             }
 
             match self.renderer.execute_command_buffer(image_num, acquire_future, command_buffer) {
@@ -133,7 +147,10 @@ impl Engine {
                         last_fps_counter_log = Instant::now();
                     }
                 },
-                Err(err) => error!("Couldn't execute command buffer for frame: {}", err),
+                Err(err) => {
+                    error!("Couldn't execute command buffer for frame: {}", err);
+                    error!("Caused by: {}", err.cause().unwrap());
+                } 
             }
         }
     }

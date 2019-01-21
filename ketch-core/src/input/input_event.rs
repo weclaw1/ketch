@@ -3,6 +3,7 @@ pub use winit::dpi::LogicalPosition;
 pub use winit::WindowEvent;
 pub use winit::DeviceEvent;
 
+// TODO: Make InputEvents simpler, dont use winit types inside enum variants, take events by reference when converting
 /// Enum containing input events
 pub enum InputEvent {
     KeyboardInput(KeyboardInput),
@@ -14,7 +15,7 @@ pub enum InputEvent {
     Button { button: ButtonId, state: ElementState },
 }
 
-/// Changes winit Events InputEvents
+/// Changes winit Events to InputEvents
 pub fn to_input_event(event: Event) -> Option<InputEvent> {
     match event {
         Event::WindowEvent { event, .. } => match event {
