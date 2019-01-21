@@ -1,8 +1,5 @@
 mod model;
 
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::cell::Cell;
 use std::time::Duration;
 use ketch_core::resource::AssetManager;
 use ketch_core::settings::Settings;
@@ -66,7 +63,7 @@ impl GameInput {
         self.grab_and_hide_cursor
     }
 
-    pub fn update_input(&mut self, input: Vec<InputEvent>) {
+    pub fn update_input(&mut self, input_system: &mut InputSystem, input: Vec<InputEvent>) {
         input.iter().for_each(|event| match event {
                 InputEvent::KeyboardInput(keyboard_input) => match keyboard_input {
                     KeyboardInput { 
@@ -82,8 +79,14 @@ impl GameInput {
                         VirtualKeyCode::S if state == &Released => self.down = false,
                         VirtualKeyCode::A if state == &Released => self.left = false,
                         VirtualKeyCode::D if state == &Released => self.right = false,
-                        VirtualKeyCode::G if state == &Pressed => self.grab_and_hide_cursor = true,
-                        VirtualKeyCode::H if state == &Pressed => self.grab_and_hide_cursor = false,
+                        VirtualKeyCode::G if state == &Pressed => {
+                            input_system.grab_cursor(true);
+                            input_system.hide_cursor(true);
+                        },
+                        VirtualKeyCode::H if state == &Pressed => {
+                            input_system.grab_cursor(false);
+                            input_system.hide_cursor(false);
+                        },
                         _ => (),
                     },
                     _ => (),
@@ -139,13 +142,13 @@ impl GameState {
 }
 
 impl EventHandler for GameState {
-    fn init(&mut self, settings: Rc<RefCell<Settings>>, asset_manager: &mut AssetManager) {
+    fn init(&mut self, settings: &Settings, asset_manager: &mut AssetManager) {
         let mesh = asset_manager.create_mesh("test_mesh", model::generate_vertices(), model::generate_indices());
         let texture = asset_manager.load_texture("crate", Path::new("example/data/crate.jpg"));
         asset_manager.add_texture(texture.clone());
         mesh.write().unwrap().set_texture(texture);
         asset_manager.add_mesh(mesh);
-        let camera = Camera::new(settings.clone());
+        let camera = Camera::new();
         asset_manager.set_active_scene(Scene::new("test_scene", camera));
         //asset_manager.active_scene_mut().unwrap().set_light_color(1.0, 0.0, 0.0);
         let mut object_builder = ObjectBuilder::new("test_object").with_mesh(asset_manager.mesh("test_mesh").unwrap());
@@ -159,24 +162,22 @@ impl EventHandler for GameState {
         asset_manager.active_scene_mut().unwrap().add_object(light_obj);
         asset_manager.active_scene_mut().unwrap().set_light_position(-1.0, 1.0, 0.0);
     }
-    fn process_input(&mut self, input_events: Vec<InputEvent>) {
-        self.input.update_input(input_events);
+    fn process_input(&mut self, input_system: &mut InputSystem, input_events: Vec<InputEvent>) {
+        self.input.update_input(input_system, input_events);
     }
-    fn update(&mut self, settings: &mut Settings, asset_manager: &mut AssetManager, elapsed_time: Duration) {
+    fn update(&mut self, settings: &Settings, asset_manager: &mut AssetManager, elapsed_time: Duration) {
         for object in asset_manager.active_scene_mut().unwrap().objects_mut().iter_mut().filter(|x| x.name() == "test_object") {
             let (x, y, z) = object.rotation_angles();
             object.set_rotation_angles(x, y + 0.01, z);
         }
         self.input.update_camera(asset_manager.active_scene_mut().unwrap().camera_mut());
-        settings.set_grab_cursor(self.input.grab_and_hide_cursor());
-        settings.set_hide_cursor(self.input.grab_and_hide_cursor());
     }
 }
 
 fn main() {
     env_logger::init();
     let mut engine = Engine::new(Settings::new("ŚWIATEŁA", 500.0, 500.0));
-    let time_per_update = engine.settings().borrow().time_per_update();
+    let time_per_update = engine.settings().time_per_update();
     let camera_speed = 5.0 * (time_per_update.subsec_millis() as f32 / 1000.0);
     let state = GameState::new(camera_speed, 0.2);
 

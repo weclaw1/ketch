@@ -3,6 +3,7 @@ mod uniform_manager;
 pub mod shader;
 pub mod renderer_error;
 
+use winit::dpi::PhysicalSize;
 use vulkano::swapchain::SwapchainAcquireFuture;
 use crate::renderer::shader::fragment_shader::ty::PushConstants;
 use vulkano::command_buffer::AutoCommandBuffer;
@@ -49,7 +50,6 @@ use crate::renderer::shader::ShaderSet;
 
 /// Top level struct of vulkan renderer.
 pub struct Renderer {
-    settings: Rc<RefCell<Settings>>,
     instance: Arc<Instance>,
     surface: Arc<Surface<Window>>,
     device: Arc<Device>,
@@ -68,19 +68,16 @@ pub struct Renderer {
 
 impl Renderer {
     /// Creates new renderer.
-    pub fn new(settings: Rc<RefCell<Settings>>, events_loop: &EventsLoop) -> Result<Self, RendererCreationError> {
+    pub fn new(settings: &Settings, events_loop: &EventsLoop) -> Result<Self, RendererCreationError> {
         let instance = create_new_instance()?;
 
         let physical_device = rank_devices(PhysicalDevice::enumerate(&instance))?;
         info!("Using device: {} (type: {:?})", physical_device.name(), physical_device.ty());
 
-        let surface = WindowBuilder::new().with_title(settings.borrow().window_title())
-                                          .with_dimensions(settings.borrow().window_size().to_logical(settings.borrow().dpi()))
+        let surface = WindowBuilder::new().with_title(settings.window_title())
+                                          .with_dimensions(settings.initial_window_size().to_logical(1.0))
                                           .build_vk_surface(events_loop, instance.clone())?;
         let window = surface.window();
-
-        window.grab_cursor(settings.borrow().grab_cursor()).unwrap();
-        window.hide_cursor(settings.borrow().hide_cursor());
 
         let physical_queues = queues::find_queues(physical_device, &surface);
 
@@ -88,7 +85,7 @@ impl Renderer {
 
         let queues = Queues::new(queues);
 
-        let (swapchain, images) = create_swapchain(settings.clone(), surface.clone(), physical_device, device.clone(), &queues)?;
+        let (swapchain, images) = create_swapchain(surface.clone(), physical_device, device.clone(), &queues)?;
 
         let uniform_manager = UniformManager::new(device.clone());
         let shader_set = Rc::new(ShaderSet::load(device.clone()));
@@ -99,7 +96,6 @@ impl Renderer {
         let framebuffers = create_framebuffers(device.clone(), &images, render_pass.clone())?;
 
         Ok(Renderer {
-            settings,
             instance,
             surface,
             device: device.clone(),
@@ -114,6 +110,11 @@ impl Renderer {
             recreate_swapchain: false,
             previous_frame: None,
         })
+    }
+
+    /// Forces renderer to recreate swapchain.
+    pub fn force_recreate_swapchain(&mut self) {
+        self.recreate_swapchain = true;
     }
 
     /// Renders one frame using active scene from asset manager.
@@ -182,7 +183,8 @@ impl Renderer {
         )?;
 
         if let Some(scene) = asset_manager.active_scene() {
-            let mut transformation_uniform_data = scene.camera().as_uniform_data();
+            let window_dimensions = get_window_dimensions(self.surface.window());
+            let mut transformation_uniform_data = scene.camera().as_uniform_data(window_dimensions.width as f32, window_dimensions.height as f32);
             self.uniform_manager.update_light_data(scene.light_data());
             
 
@@ -224,9 +226,9 @@ impl Renderer {
 
     /// Recreates swapchain when surface changed.
     fn recreate_swapchain(&mut self) -> Result<(), RenderError>{
-        let window_dimensions = get_window_dimensions(self.settings.clone(), self.surface.window());
+        let window_dimensions: (u32, u32) = get_window_dimensions(self.surface.window()).into();
 
-        let (new_swapchain, new_images) = self.swapchain.recreate_with_dimension(window_dimensions)?;
+        let (new_swapchain, new_images) = self.swapchain.recreate_with_dimension([window_dimensions.0, window_dimensions.1])?;
 
         self.swapchain = new_swapchain;
         self.images = new_images;
@@ -327,18 +329,20 @@ fn rank_devices(devices: PhysicalDevicesIter) -> Result<PhysicalDevice, Renderer
     ).max_by(|x, y| x.1.cmp(&y.1)).map(|(device, _)| device).ok_or(RendererCreationError::NoPhysicalDeviceError)
 }
 
-/// Returns and updates current window dimensions.
-fn get_window_dimensions(settings: Rc<RefCell<Settings>>, window: &Window) -> [u32; 2] {
+/// Returns current window dimensions.
+pub fn get_window_dimensions(window: &Window) -> PhysicalSize {
     let dimensions = if let Some(dimensions) = window.get_inner_size() {
-        let dimensions = dimensions.to_physical(settings.borrow().dpi());
-        settings.borrow_mut().set_window_size(dimensions);
-        let dimensions: (u32, u32) = dimensions.into();
-        [dimensions.0, dimensions.1]
+        dimensions.to_physical(window.get_hidpi_factor())
     } else {
         panic!("window was closed when calling get_window_dimensions");
     };
 
     dimensions
+}
+
+/// Returns current window dimensions.
+pub fn get_window_dpi(window: &Window) -> f64 {
+    window.get_hidpi_factor()
 }
 
 /// Creates new vulkan instance
@@ -367,7 +371,7 @@ fn create_logical_device<'a>(physical_device: PhysicalDevice, physical_queues: &
 }
 
 /// Creates a swapchain, which is a collection of images that are presented to the screen.
-fn create_swapchain<'a>(settings: Rc<RefCell<Settings>>, surface: Arc<Surface<Window>>, physical_device: PhysicalDevice<'a>,
+fn create_swapchain<'a>(surface: Arc<Surface<Window>>, physical_device: PhysicalDevice<'a>,
                         device: Arc<Device>, queues: &Queues) 
         -> Result<(Arc<Swapchain<Window>>, Vec<Arc<SwapchainImage<Window>>>), RendererCreationError> {
     let capabilities = surface.capabilities(physical_device)?;
@@ -376,7 +380,10 @@ fn create_swapchain<'a>(settings: Rc<RefCell<Settings>>, surface: Arc<Surface<Wi
 
     let initial_dimensions = match capabilities.current_extent {
         Some(dimensions) => dimensions,
-        None => get_window_dimensions(settings, surface.window()),
+        None => {
+            let dimensions: (u32, u32) = get_window_dimensions(surface.window()).into();
+            [dimensions.0, dimensions.1]
+        }
     };
 
     let present_mode = {

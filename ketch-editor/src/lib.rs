@@ -1,3 +1,4 @@
+use vulkano::swapchain::Surface;
 use vulkano::device::Queue;
 use std::sync::Arc;
 use ketch_core::input::input_event::Event;
@@ -17,44 +18,39 @@ use conrod_core::position::Relative;
 use crate::widget_ids::Ids;
 use conrod_core::Ui;
 use conrod_core::widget;
-use ketch_core::settings::Settings;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 mod widget_ids;
 
 pub struct Editor {
-    settings: Rc<RefCell<Settings>>,
     ui: Ui,
+    surface: Arc<Surface<Window>>,
     widget_ids: Ids,
     conrod_renderer: conrod_vulkano::Renderer,
     image_map: conrod_core::image::Map<conrod_vulkano::Image>,
 }
 
 impl Editor {
-    pub fn new(settings: Rc<RefCell<Settings>>, renderer: &Renderer) -> Self {
-        let (window_width, window_height, dpi) = {
-            let settings = settings.borrow();
-            (settings.window_size().width, settings.window_size().height, settings.dpi())
-        };
+    pub fn new(renderer: &Renderer) -> Self {
+        let surface = renderer.surface();
+        let window_dimensions = ketch_core::renderer::get_window_dimensions(surface.window());
 
         let subpass = vulkano::framebuffer::Subpass::from(renderer.render_pass(), 0).expect("Couldn't create subpass for GUI!");
         let conrod_renderer = conrod_vulkano::Renderer::new(
             renderer.device(),
             subpass,
             renderer.queues().graphics_queue().family(),
-            [window_width as u32, window_height as u32],
-            dpi,
+            [window_dimensions.width as u32, window_dimensions.height as u32],
+            ketch_core::renderer::get_window_dpi(surface.window()),
         ).unwrap();
 
-        let mut ui = conrod_core::UiBuilder::new([window_width, window_height]).theme(Editor::theme()).build();
+        let mut ui = conrod_core::UiBuilder::new([window_dimensions.width, window_dimensions.height]).theme(Editor::theme()).build();
         let widget_ids = widget_ids::Ids::new(ui.widget_id_generator());
         let image_map = conrod_core::image::Map::new();
         ui.fonts.insert_from_file("ketch-editor/assets/fonts/NotoSans-Regular.ttf").unwrap();
 
         Editor {
-            settings,
             ui,
+            surface,
             widget_ids,
             conrod_renderer,
             image_map,
@@ -86,11 +82,11 @@ impl Editor {
     pub fn gui(&mut self) {
         const MARGIN: conrod_core::Scalar = 30.0;
 
-        let window_width = self.settings.borrow().window_size().width;
+        let window_dimensions = ketch_core::renderer::get_window_dimensions(self.surface.window());
         let mut ui = self.ui.set_widgets();
 
         widget::Canvas::new().x_position(Position::Relative(Relative::Align(Align::Start), None))
-                             .x_dimension(Dimension::Absolute(window_width / 3.0))
+                             .x_dimension(Dimension::Absolute(window_dimensions.width / 3.0))
                              .pad(MARGIN)
                              .scroll_kids_vertically()
                              .set(self.widget_ids.canvas, &mut ui);
@@ -120,12 +116,10 @@ impl Editor {
 
     pub fn add_glyph_commands(&mut self, mut command_buffer_builder: AutoCommandBufferBuilder) -> AutoCommandBufferBuilder {
         let primitives = self.ui.draw();
-        let (window_width, window_height, dpi) = {
-            let settings = self.settings.borrow();
-            (settings.window_size().width, settings.window_size().height, settings.dpi())
-        };
+        let window_dimensions = ketch_core::renderer::get_window_dimensions(self.surface.window());
+        let dpi = ketch_core::renderer::get_window_dpi(self.surface.window());
 
-        let viewport = [0.0, 0.0, window_width as f32, window_height as f32];
+        let viewport = [0.0, 0.0, window_dimensions.width as f32, window_dimensions.height as f32];
         let mut cmds = self.conrod_renderer.fill(&self.image_map, viewport, dpi, primitives).unwrap();
 
         for cmd in cmds.commands.drain(..) {
@@ -145,12 +139,9 @@ impl Editor {
     }
 
     pub fn add_draw_commands(&mut self, queue: Arc<Queue>, mut command_buffer_builder: AutoCommandBufferBuilder) -> AutoCommandBufferBuilder {
-        let (window_width, window_height) = {
-            let settings = self.settings.borrow();
-            (settings.window_size().width, settings.window_size().height)
-        };
+        let window_dimensions = ketch_core::renderer::get_window_dimensions(self.surface.window());
 
-        let viewport = [0.0, 0.0, window_width as f32, window_height as f32];
+        let viewport = [0.0, 0.0, window_dimensions.width as f32, window_dimensions.height as f32];
 
         let draw_cmds = self.conrod_renderer.draw(
             queue,

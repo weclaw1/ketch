@@ -7,8 +7,11 @@ use ketch_core::settings::Settings;
 use ketch_core::input::InputSystem;
 use ketch_core::input;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use winit::Event;
+use winit::WindowEvent;
+
+pub use ketch_core::renderer::{get_window_dimensions, get_window_dpi};
+
 use std::time::{Duration, Instant};
 
 use fps_counter::FPSCounter;
@@ -32,7 +35,7 @@ pub struct Engine {
     asset_manager: AssetManager,
     input_system: InputSystem,
     editor: Option<Editor>,
-    settings: Rc<RefCell<Settings>>,
+    settings: Settings,
 }
 
 impl Engine {
@@ -40,10 +43,9 @@ impl Engine {
     pub fn new(mut settings: Settings) -> Self {
         let opts = Opts::from_args();
         settings.set_gui_editor(opts.gui_editor);
-        let settings = Rc::new(RefCell::new(settings));
 
-        let mut input_system = InputSystem::new(settings.clone());
-        let renderer = match Renderer::new(settings.clone(), input_system.events_loop()) {
+        let mut input_system = InputSystem::new();
+        let renderer = match Renderer::new(&settings, input_system.events_loop()) {
             Ok(renderer) => renderer,
             Err(e) => {
                 error!("Error: {}", e);
@@ -52,10 +54,10 @@ impl Engine {
             },
         };
         input_system.set_surface(renderer.surface());
-        let asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
+        let asset_manager = AssetManager::new(renderer.queues(), renderer.device());
 
         let editor = if opts.gui_editor {
-            Some(Editor::new(settings.clone(), &renderer))
+            Some(Editor::new(&renderer))
         } else {
             None
         };
@@ -70,8 +72,8 @@ impl Engine {
     }
 
     /// Returns settings used by this engine.
-    pub fn settings(&self) -> Rc<RefCell<Settings>> {
-        self.settings.clone()
+    pub fn settings(&self) -> &Settings {
+        &self.settings
     }
 
     /// Returns a reference to input system, which updates input mapping implemented by the user.
@@ -86,14 +88,14 @@ impl Engine {
 
     pub fn run<S: EventHandler>(&mut self, mut state: S) {
         let mut fps_counter = FPSCounter::new();
-        let log_fps_frequency = self.settings.borrow().log_fps_frequency();
-        let time_per_update = self.settings.borrow().time_per_update();
+        let log_fps_frequency = self.settings.log_fps_frequency();
+        let time_per_update = self.settings.time_per_update();
 
         let mut last_fps_counter_log = Instant::now();
         let mut previous_time = Instant::now();
         let mut lag = Duration::new(0, 0);
 
-        state.init(self.settings.clone(), &mut self.asset_manager);
+        state.init(&self.settings, &mut self.asset_manager);
 
         loop {
             let elapsed = previous_time.elapsed();
@@ -102,13 +104,24 @@ impl Engine {
             
             let pending_events = self.input_system.fetch_pending_events();
 
+            for event in pending_events.iter() {
+                match event {
+                    Event::WindowEvent { event, .. } => match event {
+                        WindowEvent::CloseRequested => std::process::exit(0),
+                        WindowEvent::HiDpiFactorChanged(_dpi) => self.renderer.force_recreate_swapchain(),
+                        _ => (),
+                    },
+                    _ => (),
+                }
+            }
+
             if let Some(editor) = &mut self.editor {
                 editor.handle_input(self.input_system.window().unwrap(), pending_events.clone());
             }
-            state.process_input(input::convert_to_input_events(pending_events));
+            state.process_input(&mut self.input_system, input::convert_to_input_events(pending_events));
 
             while lag >= time_per_update {
-                state.update(&mut self.settings.borrow_mut(), &mut self.asset_manager, time_per_update);
+                state.update(&self.settings, &mut self.asset_manager, time_per_update);
 
                 lag -= time_per_update;
             }
@@ -157,7 +170,7 @@ impl Engine {
 }
 
 pub trait EventHandler {
-    fn process_input(&mut self, input_events: Vec<InputEvent>);
-    fn update(&mut self, settings: &mut Settings, asset_manager: &mut AssetManager, elapsed_time: Duration);
-    fn init(&mut self, settings: Rc<RefCell<Settings>>, asset_manager: &mut AssetManager);
+    fn process_input(&mut self, input_system: &mut InputSystem, input_events: Vec<InputEvent>);
+    fn update(&mut self, settings: &Settings, asset_manager: &mut AssetManager, elapsed_time: Duration);
+    fn init(&mut self, settings: &Settings, asset_manager: &mut AssetManager);
 }

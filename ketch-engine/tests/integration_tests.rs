@@ -41,11 +41,11 @@ fn fetch_pending_events_does_not_panic() {
 #[test]
 #[ignore]
 fn render_renders_empty_frame_without_error() {
-    let settings = Rc::new(RefCell::new(Settings::new("test", 600.0, 400.0)));
-    let input_system = InputSystem::new(settings.clone());
+    let settings = Settings::new("test", 600.0, 400.0);
+    let input_system = InputSystem::new();
     
-    let mut renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
-    let mut asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
+    let mut renderer = Renderer::new(&settings, input_system.events_loop()).unwrap();
+    let mut asset_manager = AssetManager::new(renderer.queues(), renderer.device());
     let command_buffer_result = renderer.create_command_buffer();
     assert!(command_buffer_result.is_ok());
     let command_buffer = command_buffer_result.unwrap();
@@ -59,15 +59,15 @@ fn render_renders_empty_frame_without_error() {
 #[test]
 #[ignore]
 fn render_simple_cube_without_texture() {
-    let settings = Rc::new(RefCell::new(Settings::new("test", 600.0, 400.0)));
-    let input_system = InputSystem::new(settings.clone());
+    let settings = Settings::new("test", 600.0, 400.0);
+    let input_system = InputSystem::new();
     
-    let mut renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
-    let mut asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
+    let mut renderer = Renderer::new(&settings, input_system.events_loop()).unwrap();
+    let mut asset_manager = AssetManager::new(renderer.queues(), renderer.device());
 
     let mesh = asset_manager.create_mesh("test_mesh", common::model::generate_vertices(), common::model::generate_indices());
     asset_manager.add_mesh(mesh);
-    let camera = Camera::new(settings.clone());
+    let camera = Camera::new();
     asset_manager.set_active_scene(Scene::new("test_scene", camera));
     let object = ObjectBuilder::new("test_object").with_mesh(asset_manager.mesh("test_mesh").unwrap()).build();
     asset_manager.active_scene_mut().unwrap().add_object(object);
@@ -85,18 +85,18 @@ fn render_simple_cube_without_texture() {
 #[test]
 #[ignore]
 fn render_simple_cube_with_texture() {
-    let settings = Rc::new(RefCell::new(Settings::new("test", 600.0, 400.0)));
-    let input_system = InputSystem::new(settings.clone());
+    let settings = Settings::new("test", 600.0, 400.0);
+    let input_system = InputSystem::new();
     
-    let mut renderer = Renderer::new(settings.clone(), input_system.events_loop()).unwrap();
-    let mut asset_manager = AssetManager::new(settings.clone(), renderer.queues(), renderer.device());
+    let mut renderer = Renderer::new(&settings, input_system.events_loop()).unwrap();
+    let mut asset_manager = AssetManager::new(renderer.queues(), renderer.device());
 
     let mesh = asset_manager.create_mesh("test_mesh", common::model::generate_vertices(), common::model::generate_indices());
     let texture = asset_manager.load_texture("test_texture", Path::new("tests/common/data/rust_logo.png"));
     asset_manager.add_texture(texture.clone());
     mesh.write().unwrap().set_texture(texture);
     asset_manager.add_mesh(mesh);
-    let camera = Camera::new(settings.clone());
+    let camera = Camera::new();
     asset_manager.set_active_scene(Scene::new("test_scene", camera));
     let object = ObjectBuilder::new("test_object").with_mesh(asset_manager.mesh("test_mesh").unwrap()).build();
     asset_manager.active_scene_mut().unwrap().add_object(object);

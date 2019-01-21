@@ -8,5 +8,6 @@ edition = "2018"
 log = "0.4.6"
 fps_counter = "1.0.0"
 structopt = "0.2.14"
+winit = "0.18"
 ketch-editor = { path = "../ketch-editor" }
 ketch-core = { path = "../ketch-core" }
