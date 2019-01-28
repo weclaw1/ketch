@@ -108,6 +108,7 @@ impl Engine {
                 match event {
                     Event::WindowEvent { event, .. } => match event {
                         WindowEvent::CloseRequested => std::process::exit(0),
+                        WindowEvent::Resized(_window_size) => self.renderer.force_recreate_swapchain(),
                         WindowEvent::HiDpiFactorChanged(_dpi) => self.renderer.force_recreate_swapchain(),
                         _ => (),
                     },
