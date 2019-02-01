@@ -5,7 +5,9 @@ widget_ids! {
     pub struct Ids {
         // The scrollable canvas.
         canvas,
-        // The title and introduction widgets.
-        test_text,
+        // Title of lightsection.
+        light_text,
+        x_light_pos,
+        x_text_box,
     }
 }

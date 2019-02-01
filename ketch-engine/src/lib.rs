@@ -117,7 +117,7 @@ impl Engine {
             }
 
             if let Some(editor) = &mut self.editor {
-                editor.handle_input(self.input_system.window().unwrap(), pending_events.clone());
+                editor.handle_input(self.input_system.window().unwrap(), pending_events.clone(), &mut self.asset_manager);
             }
             state.process_input(&mut self.input_system, input::convert_to_input_events(pending_events));
 

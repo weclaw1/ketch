@@ -1,3 +1,4 @@
+use ketch_core::resource::AssetManager;
 use vulkano::swapchain::Surface;
 use vulkano::device::Queue;
 use std::sync::Arc;
@@ -10,11 +11,13 @@ use ketch_core::renderer::Renderer;
 use conrod_core::render::Primitives;
 use conrod_core::position::Positionable;
 use conrod_core::widget::Widget;
+use conrod_core::widget::text_box;
 use conrod_core::position::Sizeable;
 use conrod_core::position::Position;
 use conrod_core::position::Dimension;
 use conrod_core::position::Align;
 use conrod_core::position::Relative;
+use conrod_core::position::Place;
 use crate::widget_ids::Ids;
 use conrod_core::Ui;
 use conrod_core::widget;
@@ -27,6 +30,8 @@ pub struct Editor {
     widget_ids: Ids,
     conrod_renderer: conrod_vulkano::Renderer,
     image_map: conrod_core::image::Map<conrod_vulkano::Image>,
+
+    x_text_box_content: String,
 }
 
 impl Editor {
@@ -54,6 +59,8 @@ impl Editor {
             widget_ids,
             conrod_renderer,
             image_map,
+
+            x_text_box_content: String::from("0.0"),
         }
     }
 
@@ -79,7 +86,7 @@ impl Editor {
         }
     }
 
-    pub fn gui(&mut self) {
+    pub fn gui(&mut self, asset_manager: &mut AssetManager) {
         const MARGIN: conrod_core::Scalar = 30.0;
 
         let window_dimensions = ketch_core::renderer::get_window_dimensions(self.surface.window());
@@ -91,7 +98,33 @@ impl Editor {
                              .scroll_kids_vertically()
                              .set(self.widget_ids.canvas, &mut ui);
 
-        widget::Text::new("Ala ma kota").mid_top_of(self.widget_ids.canvas).set(self.widget_ids.test_text, &mut ui);
+        widget::Text::new("Light").mid_top_of(self.widget_ids.canvas).set(self.widget_ids.light_text, &mut ui);
+
+        widget::Text::new("x:").y_position_relative(Relative::Scalar(-20.0))
+                               .x_place_on(self.widget_ids.canvas, Place::Start(None))
+                               .set(self.widget_ids.x_light_pos, &mut ui);
+
+        for event in widget::TextBox::new(&self.x_text_box_content).right_from(self.widget_ids.x_light_pos, 20.0)
+                                                .y_place_on(self.widget_ids.x_light_pos, Place::End(None))
+                                                .wh([60.0, 30.0])
+                                                .set(self.widget_ids.x_text_box, &mut ui) 
+        {
+            match event {
+                text_box::Event::Enter => {
+                    if let Some(scene) = asset_manager.active_scene_mut() {
+                        let position_x: Result<f32, _> = self.x_text_box_content.parse();
+                        match position_x {
+                            Ok(val) => scene.set_light_position_x(val),
+                            Err(err) => (),
+                        }
+                    }
+                },
+                text_box::Event::Update(new_val) => {
+                    self.x_text_box_content = new_val;
+                }
+            }
+        }
+
     }
 
     pub fn draw_ui(&self) -> Primitives {
@@ -106,11 +139,11 @@ impl Editor {
         &self.image_map
     }
 
-    pub fn handle_input(&mut self, window: &Window, input_events: Vec<Event>) {
+    pub fn handle_input(&mut self, window: &Window, input_events: Vec<Event>, asset_manager: &mut AssetManager) {
         input_events.into_iter().filter_map(|event| conrod_winit::convert_event(event, window))
                                 .for_each(|event| self.ui.handle_event(event));
         if self.ui.global_input().events().next().is_some() {
-            self.gui();
+            self.gui(asset_manager);
         }
     }
 

@@ -102,6 +102,10 @@ impl Scene {
         self.light_position = Vec3::new(x, y, z);
     }
 
+    pub fn set_light_position_x(&mut self, x: f32) {
+        self.light_position.x = x;
+    }
+
     pub fn light_position(&self) -> (f32, f32, f32) {
         (self.light_position.x, self.light_position.y, self.light_position.z)
     }
