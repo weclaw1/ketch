@@ -48,8 +48,7 @@ impl Engine {
         let renderer = match Renderer::new(&settings, input_system.events_loop()) {
             Ok(renderer) => renderer,
             Err(e) => {
-                error!("Error: {}", e);
-                error!("Caused by: {}", e.cause().unwrap());
+                error!("Couldn't create renderer: {}", e);
                 panic!("Couldn't create renderer!");
             },
         };
@@ -60,8 +59,7 @@ impl Engine {
             match Editor::new(&renderer) {
                 Ok(editor) => Some(editor),
                 Err(e) => {
-                    error!("Error: {}", e);
-                    error!("Caused by: {}", e.cause().unwrap());
+                    error!("Couldn't create editor: {}", e);
                     panic!("Couldn't create editor!");
                 },
             }
@@ -138,7 +136,6 @@ impl Engine {
                 Ok(res) => res,
                 Err(err) => {
                     error!("Couldn't create command buffer: {}", err);
-                    error!("Caused by: {}", err.cause().unwrap());
                     continue;
                 }
             };
@@ -151,7 +148,6 @@ impl Engine {
                 Ok(res) => res,
                 Err(err) => {
                     error!("Couldn't render scene: {}", err);
-                    error!("Caused by: {}", err.cause().unwrap());
                     continue;
                 }
             };
@@ -170,7 +166,6 @@ impl Engine {
                 },
                 Err(err) => {
                     error!("Couldn't execute command buffer for frame: {}", err);
-                    error!("Caused by: {}", err.cause().unwrap());
                 } 
             }
         }

@@ -1,13 +1,25 @@
-use conrod_core::text::font::Error;
+use std::error::Error;
+
+use conrod_core::text::font;
 use conrod_vulkano::RendererCreationError;
-use derive_error::Error;
 
-#[derive(Debug, Error)]
-pub enum EditorCreationError {
-    /// Couldn't create subpass for GUI editor!
-    #[error(no_from, non_std)]
-    SubpassCreationError,
+use quick_error::quick_error; 
 
-    RendererCreationError(RendererCreationError),
-    FontLoadError(Error),
+quick_error! {
+    #[derive(Debug)]
+    pub enum EditorCreationError {
+        SubpassCreationError {
+            display("SubpassCreationError: couldn't create subpass for GUI editor")
+        }
+        RendererCreationError(err: RendererCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        FontLoadError(err: font::Error) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+    }
 }

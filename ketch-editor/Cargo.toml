@@ -10,7 +10,7 @@ vulkano = "0.11.1"
 conrod_core = "0.62.0"
 conrod_vulkano = "0.62.0"
 conrod_winit = "0.62.0"
-derive-error = "0.0.4"
+quick-error = "1.2.2"
 winit = "0.18"
 image = "0.21.0"
 ketch-core = { path = "../ketch-core" }

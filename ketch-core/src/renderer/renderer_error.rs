@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use vulkano::sync::FlushError;
 use vulkano::command_buffer::CommandBufferExecError;
 use vulkano::command_buffer::BuildError;
@@ -6,7 +8,6 @@ use vulkano::command_buffer::DrawIndexedError;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSetBuildError;
 use vulkano::descriptor::descriptor_set::PersistentDescriptorSetError;
 use vulkano::memory::DeviceMemoryAllocError;
-use derive_error::Error;
 
 use vulkano::command_buffer::BeginRenderPassError;
 use vulkano::OomError;
@@ -20,37 +21,129 @@ use vulkano::device::DeviceCreationError;
 use vulkano::instance::InstanceCreationError;
 use vulkano_win::{CreationError as WindowCreationError};
 
-#[derive(Debug, Error)]
-pub enum RendererCreationError {
-    InstanceCreationError(InstanceCreationError),
-    WindowCreationError(WindowCreationError),
-    DeviceCreationError(DeviceCreationError),
-    CapabilitiesError(CapabilitiesError),
-    SwapchainCreationError(SwapchainCreationError),
-    GraphicsPipelineCreationError(GraphicsPipelineCreationError),
-    FramebufferCreationError(FramebufferCreationError),
-    RenderPassCreationError(RenderPassCreationError),
+use quick_error::quick_error; 
 
-    /// Couldn't find usable physical device.
-    #[error(no_from, non_std)]
-    NoPhysicalDeviceError,
-} 
+quick_error! {
+    #[derive(Debug)]
+    pub enum RenderError {
+        SwapchainCreationError(err: SwapchainCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        GraphicsPipelineCreationError(err: GraphicsPipelineCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        FramebufferCreationError(err: FramebufferCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        AcquireError(err: AcquireError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        OomError(err: OomError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        BeginRenderPassError(err: BeginRenderPassError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        DeviceMemoryAllocError(err: DeviceMemoryAllocError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        PersistentDescriptorSetError(err: PersistentDescriptorSetError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        PersistentDescriptorSetBuildError(err: PersistentDescriptorSetBuildError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        DrawIndexedError(err: DrawIndexedError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        AutoCommandBufferBuilderContextError(err: AutoCommandBufferBuilderContextError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        CommandBufferBuildError(err: BuildError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        CommandBufferExecError(err: CommandBufferExecError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        FlushError(err: FlushError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+    }
+}
 
-
-#[derive(Debug, Error)]
-pub enum RenderError {
-    SwapchainCreationError(SwapchainCreationError),
-    GraphicsPipelineCreationError(GraphicsPipelineCreationError),
-    FramebufferCreationError(FramebufferCreationError),
-    AcquireError(AcquireError),
-    OomError(OomError),
-    BeginRenderPassError(BeginRenderPassError),
-    DeviceMemoryAllocError(DeviceMemoryAllocError),
-    PersistentDescriptorSetError(PersistentDescriptorSetError),
-    PersistentDescriptorSetBuildError(PersistentDescriptorSetBuildError),
-    DrawIndexedError(DrawIndexedError),
-    AutoCommandBufferBuilderContextError(AutoCommandBufferBuilderContextError),
-    CommandBufferBuildError(BuildError),
-    CommandBufferExecError(CommandBufferExecError),
-    FlushError(FlushError),
+quick_error! {
+    #[derive(Debug)]
+    pub enum RendererCreationError {
+        InstanceCreationError(err: InstanceCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        WindowCreationError(err: WindowCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        DeviceCreationError(err: DeviceCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        CapabilitiesError(err: CapabilitiesError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        SwapchainCreationError(err: SwapchainCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        GraphicsPipelineCreationError(err: GraphicsPipelineCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        FramebufferCreationError(err: FramebufferCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        RenderPassCreationError(err: RenderPassCreationError) {
+            from()
+            display(x) -> ("{}: {}", x.description(), err)
+            cause(err)
+        }
+        NoPhysicalDeviceError {
+            display("NoPhysicalDeviceError: couldn't find usable physical device")
+        }
+    } 
 }
