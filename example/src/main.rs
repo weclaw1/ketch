@@ -176,7 +176,7 @@ impl EventHandler for GameState {
 
 fn main() {
     env_logger::init();
-    let mut engine = Engine::new(Settings::new("ŚWIATEŁA", 500.0, 500.0));
+    let mut engine = Engine::new(Settings::new("ŚWIATEŁA", 1024.0, 768.0));
     let time_per_update = engine.settings().time_per_update();
     let camera_speed = 5.0 * (time_per_update.subsec_millis() as f32 / 1000.0);
     let state = GameState::new(camera_speed, 0.2);

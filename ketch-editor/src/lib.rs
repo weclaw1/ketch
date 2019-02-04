@@ -1,3 +1,4 @@
+use crate::editor_error::EditorCreationError;
 use ketch_core::resource::AssetManager;
 use vulkano::swapchain::Surface;
 use vulkano::device::Queue;
@@ -9,20 +10,16 @@ use conrod_vulkano::Image;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use ketch_core::renderer::Renderer;
 use conrod_core::render::Primitives;
-use conrod_core::position::Positionable;
-use conrod_core::widget::Widget;
-use conrod_core::widget::text_box;
-use conrod_core::position::Sizeable;
-use conrod_core::position::Position;
-use conrod_core::position::Dimension;
-use conrod_core::position::Align;
-use conrod_core::position::Relative;
-use conrod_core::position::Place;
+use editor_state::EditorState;
+
 use crate::widget_ids::Ids;
 use conrod_core::Ui;
-use conrod_core::widget;
+
 
 mod widget_ids;
+mod editor_state;
+mod editor_error;
+mod gui;
 
 pub struct Editor {
     ui: Ui,
@@ -30,44 +27,49 @@ pub struct Editor {
     widget_ids: Ids,
     conrod_renderer: conrod_vulkano::Renderer,
     image_map: conrod_core::image::Map<conrod_vulkano::Image>,
-
-    x_text_box_content: String,
+    editor_state: EditorState,
 }
 
 impl Editor {
-    pub fn new(renderer: &Renderer) -> Self {
+    pub fn new(renderer: &Renderer) -> Result<Self, EditorCreationError> {
         let surface = renderer.surface();
         let window_dimensions = ketch_core::renderer::get_window_dimensions(surface.window());
 
-        let subpass = vulkano::framebuffer::Subpass::from(renderer.render_pass(), 0).expect("Couldn't create subpass for GUI!");
+        let subpass = match vulkano::framebuffer::Subpass::from(renderer.render_pass(), 0) {
+            Some(subpass) => subpass,
+            None => return Err(EditorCreationError::SubpassCreationError),
+        };
+
         let conrod_renderer = conrod_vulkano::Renderer::new(
             renderer.device(),
             subpass,
             renderer.queues().graphics_queue().family(),
             [window_dimensions.width as u32, window_dimensions.height as u32],
             ketch_core::renderer::get_window_dpi(surface.window()),
-        ).unwrap();
+        )?;
 
         let mut ui = conrod_core::UiBuilder::new([window_dimensions.width, window_dimensions.height]).theme(Editor::theme()).build();
         let widget_ids = widget_ids::Ids::new(ui.widget_id_generator());
         let image_map = conrod_core::image::Map::new();
-        ui.fonts.insert_from_file("ketch-editor/assets/fonts/NotoSans-Regular.ttf").unwrap();
+        ui.fonts.insert_from_file("ketch-editor/assets/fonts/NotoSans-Regular.ttf")?;
 
-        Editor {
-            ui,
-            surface,
-            widget_ids,
-            conrod_renderer,
-            image_map,
+        Ok(
+            Editor {
+                ui,
+                surface,
+                widget_ids,
+                conrod_renderer,
+                image_map,
 
-            x_text_box_content: String::from("0.0"),
-        }
+                editor_state: EditorState::new(),
+            }
+        )
     }
 
     pub fn theme() -> conrod_core::Theme {
         use conrod_core::position::{Align, Direction, Padding, Position, Relative};
         conrod_core::Theme {
-            name: "Demo Theme".to_string(),
+            name: "Ketch Editor Theme".to_string(),
             padding: Padding::none(),
             x_position: Position::Relative(Relative::Align(Align::Start), None),
             y_position: Position::Relative(Relative::Direction(Direction::Backwards, 20.0), None),
@@ -84,47 +86,6 @@ impl Editor {
             mouse_drag_threshold: 0.0,
             double_click_threshold: std::time::Duration::from_millis(500),
         }
-    }
-
-    pub fn gui(&mut self, asset_manager: &mut AssetManager) {
-        const MARGIN: conrod_core::Scalar = 30.0;
-
-        let window_dimensions = ketch_core::renderer::get_window_dimensions(self.surface.window());
-        let mut ui = self.ui.set_widgets();
-
-        widget::Canvas::new().x_position(Position::Relative(Relative::Align(Align::Start), None))
-                             .x_dimension(Dimension::Absolute(window_dimensions.width / 3.0))
-                             .pad(MARGIN)
-                             .scroll_kids_vertically()
-                             .set(self.widget_ids.canvas, &mut ui);
-
-        widget::Text::new("Light").mid_top_of(self.widget_ids.canvas).set(self.widget_ids.light_text, &mut ui);
-
-        widget::Text::new("x:").y_position_relative(Relative::Scalar(-20.0))
-                               .x_place_on(self.widget_ids.canvas, Place::Start(None))
-                               .set(self.widget_ids.x_light_pos, &mut ui);
-
-        for event in widget::TextBox::new(&self.x_text_box_content).right_from(self.widget_ids.x_light_pos, 20.0)
-                                                .y_place_on(self.widget_ids.x_light_pos, Place::End(None))
-                                                .wh([60.0, 30.0])
-                                                .set(self.widget_ids.x_text_box, &mut ui) 
-        {
-            match event {
-                text_box::Event::Enter => {
-                    if let Some(scene) = asset_manager.active_scene_mut() {
-                        let position_x: Result<f32, _> = self.x_text_box_content.parse();
-                        match position_x {
-                            Ok(val) => scene.set_light_position_x(val),
-                            Err(err) => (),
-                        }
-                    }
-                },
-                text_box::Event::Update(new_val) => {
-                    self.x_text_box_content = new_val;
-                }
-            }
-        }
-
     }
 
     pub fn draw_ui(&self) -> Primitives {

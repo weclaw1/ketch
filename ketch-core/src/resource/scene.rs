@@ -106,8 +106,28 @@ impl Scene {
         self.light_position.x = x;
     }
 
+    pub fn set_light_position_y(&mut self, y: f32) {
+        self.light_position.y = y;
+    }
+
+    pub fn set_light_position_z(&mut self, z: f32) {
+        self.light_position.z = z;
+    }
+
     pub fn light_position(&self) -> (f32, f32, f32) {
         (self.light_position.x, self.light_position.y, self.light_position.z)
+    }
+
+    pub fn light_position_x(&self) -> f32 {
+        self.light_position.x
+    }
+
+    pub fn light_position_y(&self) -> f32 {
+        self.light_position.y
+    }
+
+    pub fn light_position_z(&self) -> f32 {
+        self.light_position.z
     }
 
     pub fn light_data(&self) -> LightData {
