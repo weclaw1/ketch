@@ -3,11 +3,10 @@ pub use winit::dpi::LogicalPosition;
 pub use winit::WindowEvent;
 pub use winit::DeviceEvent;
 
-// TODO: Make InputEvents simpler, dont use winit types inside enum variants, take events by reference when converting
 /// Enum containing input events
 pub enum InputEvent {
-    KeyboardInput(KeyboardInput),
-    CursorMoved (LogicalPosition),
+    KeyboardInput { state: ElementState, keycode: VirtualKeyCode },
+    CursorMoved { x: f64, y: f64 },
     MouseMotion { delta: (f64, f64) },
     MouseWheel(MouseScrollDelta),
     MouseInput { button: MouseButton, state: ElementState },
@@ -19,8 +18,15 @@ pub enum InputEvent {
 pub fn to_input_event(event: Event) -> Option<InputEvent> {
     match event {
         Event::WindowEvent { event, .. } => match event {
-            WindowEvent::KeyboardInput { input, .. } => Some(InputEvent::KeyboardInput(input)),
-            WindowEvent::CursorMoved { position, .. } => Some(InputEvent::CursorMoved(position)),
+            WindowEvent::KeyboardInput { input, .. } => match input {
+                KeyboardInput {
+                    virtual_keycode: Some(key),
+                    state,
+                    .. 
+                } => Some(InputEvent::KeyboardInput { state: state, keycode: key }),
+                _ => None,
+            },
+            WindowEvent::CursorMoved { position, .. } => Some(InputEvent::CursorMoved { x: position.x, y: position.y }),
             WindowEvent::MouseWheel { delta, .. } => Some(InputEvent::MouseWheel(delta)),
             WindowEvent::MouseInput { button, state, .. } => Some(InputEvent::MouseInput { button, state }),
             _ => None,

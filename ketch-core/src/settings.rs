@@ -7,7 +7,6 @@ pub struct Settings {
     initial_window_size: PhysicalSize,
     time_per_update: Duration,
     log_fps_frequency: Duration,
-    gui_editor: bool,
 }
 
 impl Settings {
@@ -50,13 +49,5 @@ impl Settings {
     /// Returns duration between game fps logs.
     pub fn log_fps_frequency(&self) -> Duration {
         self.log_fps_frequency
-    }
-
-    pub fn set_gui_editor(&mut self, value: bool) {
-        self.gui_editor = value;
-    }
-
-    pub fn gui_editor(&self) -> bool {
-        self.gui_editor
     }
 }

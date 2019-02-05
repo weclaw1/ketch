@@ -40,9 +40,8 @@ pub struct Engine {
 
 impl Engine {
     /// Creates and returns a new instance of this engine.
-    pub fn new(mut settings: Settings) -> Self {
+    pub fn new(settings: Settings) -> Self {
         let opts = Opts::from_args();
-        settings.set_gui_editor(opts.gui_editor);
 
         let mut input_system = InputSystem::new();
         let renderer = match Renderer::new(&settings, input_system.events_loop()) {
@@ -119,6 +118,11 @@ impl Engine {
                     },
                     _ => (),
                 }
+            }
+
+            match &mut self.editor {
+                Some(editor) => (),
+                None => (),
             }
 
             if let Some(editor) = &mut self.editor {

@@ -161,6 +161,10 @@ impl Editor {
         }
         command_buffer_builder
     }
+
+    pub fn run_game(&mut self) -> bool {
+        self.editor_state.run_game
+    }
 }
 
 
