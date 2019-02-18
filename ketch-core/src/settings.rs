@@ -17,7 +17,6 @@ impl Settings {
             initial_window_size: PhysicalSize::new(scr_width, scr_height),
             time_per_update: Duration::from_millis(16),
             log_fps_frequency: Duration::from_secs(5),
-            gui_editor: false,
         }
     }
 

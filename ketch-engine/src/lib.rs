@@ -1,3 +1,4 @@
+use winit::KeyboardInput;
 use ketch_editor::Editor;
 use std::error::Error;
 use ketch_core::input::input_event::InputEvent;
@@ -9,6 +10,8 @@ use ketch_core::input;
 
 use winit::Event;
 use winit::WindowEvent;
+use winit::VirtualKeyCode;
+use winit::ElementState;
 
 pub use ketch_core::renderer::{get_window_dimensions, get_window_dpi};
 
@@ -90,6 +93,44 @@ impl Engine {
         &mut self.asset_manager
     }
 
+    fn handle_input<S: EventHandler>(&mut self, state: &mut S) {
+        let pending_events = self.input_system.fetch_pending_events();
+        let mut esc_pressed = false;
+
+        for event in pending_events.iter() {
+            match event {
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::CloseRequested => std::process::exit(0),
+                    WindowEvent::Resized(_window_size) => self.renderer.force_recreate_swapchain(),
+                    WindowEvent::HiDpiFactorChanged(_dpi) => self.renderer.force_recreate_swapchain(),
+                    WindowEvent::KeyboardInput { input, .. } => match input {
+                        KeyboardInput {
+                            virtual_keycode: Some(VirtualKeyCode::Escape),
+                            state: ElementState::Pressed,
+                            .. 
+                        } => esc_pressed = true,
+                        _ => (),
+                    },
+                    _ => (),
+                },
+                _ => (),
+            }
+        }
+
+        match &mut self.editor {
+            Some(editor) => {
+                if editor.run_game() && esc_pressed {
+                    editor.set_run_game(false, Some(&self.asset_manager));
+                } else if editor.run_game() && !esc_pressed {
+                    state.process_input(&mut self.input_system, input::convert_to_input_events(pending_events));
+                } else {
+                    editor.handle_input(self.input_system.window().unwrap(), pending_events, &mut self.asset_manager);
+                }
+            },
+            None => state.process_input(&mut self.input_system, input::convert_to_input_events(pending_events)),
+        }  
+    }
+
     pub fn run<S: EventHandler>(&mut self, mut state: S) {
         let mut fps_counter = FPSCounter::new();
         let log_fps_frequency = self.settings.log_fps_frequency();
@@ -101,34 +142,16 @@ impl Engine {
 
         state.init(&self.settings, &mut self.asset_manager);
 
+        if let Some(editor) = &mut self.editor {
+            editor.sync_editor(&mut self.asset_manager);
+        }
+
         loop {
             let elapsed = previous_time.elapsed();
             previous_time = Instant::now();
             lag += elapsed;
             
-            let pending_events = self.input_system.fetch_pending_events();
-
-            for event in pending_events.iter() {
-                match event {
-                    Event::WindowEvent { event, .. } => match event {
-                        WindowEvent::CloseRequested => std::process::exit(0),
-                        WindowEvent::Resized(_window_size) => self.renderer.force_recreate_swapchain(),
-                        WindowEvent::HiDpiFactorChanged(_dpi) => self.renderer.force_recreate_swapchain(),
-                        _ => (),
-                    },
-                    _ => (),
-                }
-            }
-
-            match &mut self.editor {
-                Some(editor) => (),
-                None => (),
-            }
-
-            if let Some(editor) = &mut self.editor {
-                editor.handle_input(self.input_system.window().unwrap(), pending_events.clone(), &mut self.asset_manager);
-            }
-            state.process_input(&mut self.input_system, input::convert_to_input_events(pending_events));
+            self.handle_input(&mut state);
 
             while lag >= time_per_update {
                 state.update(&self.settings, &mut self.asset_manager, time_per_update);

@@ -65,39 +65,31 @@ impl GameInput {
 
     pub fn update_input(&mut self, input_system: &mut InputSystem, input: Vec<InputEvent>) {
         input.iter().for_each(|event| match event {
-                InputEvent::KeyboardInput(keyboard_input) => match keyboard_input {
-                    KeyboardInput { 
-                        virtual_keycode: Some(key),
-                        state,
-                        .. 
-                    } => match key {
-                        VirtualKeyCode::W if state == &Pressed => self.up = true,
-                        VirtualKeyCode::S if state == &Pressed => self.down = true,
-                        VirtualKeyCode::A if state == &Pressed => self.left = true,
-                        VirtualKeyCode::D if state == &Pressed => self.right = true,
-                        VirtualKeyCode::W if state == &Released => self.up = false,
-                        VirtualKeyCode::S if state == &Released => self.down = false,
-                        VirtualKeyCode::A if state == &Released => self.left = false,
-                        VirtualKeyCode::D if state == &Released => self.right = false,
-                        VirtualKeyCode::G if state == &Pressed => {
-                            input_system.grab_cursor(true);
-                            input_system.hide_cursor(true);
-                        },
-                        VirtualKeyCode::H if state == &Pressed => {
-                            input_system.grab_cursor(false);
-                            input_system.hide_cursor(false);
-                        },
-                        _ => (),
-                    },
-                    _ => (),
+            InputEvent::KeyboardInput { keycode, state } => match keycode {
+                VirtualKeyCode::W if state == &Pressed => self.up = true,
+                VirtualKeyCode::S if state == &Pressed => self.down = true,
+                VirtualKeyCode::A if state == &Pressed => self.left = true,
+                VirtualKeyCode::D if state == &Pressed => self.right = true,
+                VirtualKeyCode::W if state == &Released => self.up = false,
+                VirtualKeyCode::S if state == &Released => self.down = false,
+                VirtualKeyCode::A if state == &Released => self.left = false,
+                VirtualKeyCode::D if state == &Released => self.right = false,
+                VirtualKeyCode::G if state == &Pressed => {
+                    input_system.grab_cursor(true);
+                    input_system.hide_cursor(true);
                 },
-                InputEvent::MouseMotion { delta } => {
-                    self.mouse_delta_changed = true;
-                    self.mouse_delta = (delta.0 as f32, delta.1 as f32);
+                VirtualKeyCode::H if state == &Pressed => {
+                    input_system.grab_cursor(false);
+                    input_system.hide_cursor(false);
                 },
                 _ => (),
-            }
-        )
+            },
+            InputEvent::MouseMotion { delta } => {
+                self.mouse_delta_changed = true;
+                self.mouse_delta = (delta.0 as f32, delta.1 as f32);
+            },
+            _ => (),
+        })
     }
 
     pub fn update_camera(&mut self, camera: &mut Camera) {

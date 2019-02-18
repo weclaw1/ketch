@@ -1,3 +1,4 @@
+use crate::editor_event::EditorEvent;
 use crate::editor_state::EditorState;
 use crate::widget_ids::Ids;
 use ketch_core::resource::AssetManager;
@@ -18,16 +19,22 @@ use crate::Editor;
 
 use log::*;
 
+mod gui_event;
+
+use gui_event::light_text_box_event_execute;
+
 impl Editor {
-    pub fn gui(&mut self, asset_manager: &mut AssetManager) {
+    pub fn update_gui(&mut self) {
         let window_dimensions = ketch_core::renderer::get_window_dimensions(self.surface.window());
         let mut ui = self.ui.set_widgets();
 
-        light_panel(&self.widget_ids, &mut ui, &mut self.editor_state, asset_manager);
+        light_panel(&self.widget_ids, &mut ui, &self.synced_editor_state, &mut self.current_editor_state, &mut self.pending_editor_events);
     }
 }
 
-fn light_panel(ids: &Ids, ui: &mut conrod_core::UiCell, editor_state: &mut EditorState, asset_manager: &mut AssetManager) {
+fn light_panel(ids: &Ids, ui: &mut conrod_core::UiCell, 
+               synced_editor_state: &EditorState, current_editor_state: &mut EditorState,
+               pending_editor_events: &mut Vec<EditorEvent>) {
     const PANEL_TITLE: &str = "Light";
     const PANEL_WIDTH: f64 = 300.0;
     const PANEL_HEIGHT: f64 = 150.0;
@@ -51,90 +58,28 @@ fn light_panel(ids: &Ids, ui: &mut conrod_core::UiCell, editor_state: &mut Edito
     widget::Text::new("x:").mid_left_of(ids.light_panel_x_column)
                            .set(ids.x_light_label, ui);
 
-    for event in widget::TextBox::new(&editor_state.x_text_box_content).right_from(ids.x_light_label, WIDGET_DISTANCE)
-                                            .wh([TEXT_BOX_WIDTH, TEXT_BOX_HEIGHT])
-                                            .set(ids.x_text_box, ui) 
-    {
-        match event {
-            text_box::Event::Enter => {
-                if let Some(scene) = asset_manager.active_scene_mut() {
-                    match editor_state.x_text_box_content.parse::<f32>() {
-                        Ok(val) => {
-                            scene.set_light_position_x(val);
-                            if let Some(light_object) = scene.objects_mut().iter_mut().find(|x| x.light_source()) {
-                                light_object.set_position_x(val);
-                            }
-                        },
-                        Err(err) => {
-                            error!("Couldn't parse x light source text box: {}", err);
-                            editor_state.x_text_box_content = scene.light_position_x().to_string();
-                        },
-                    }
-                }
-            },
-            text_box::Event::Update(new_val) => {
-                editor_state.x_text_box_content = new_val;
-            }
-        }
-    }
+    let x_light_text_box = widget::TextBox::new(&current_editor_state.x_light_text_box_content).right_from(ids.x_light_label, WIDGET_DISTANCE)
+                                            .wh([TEXT_BOX_WIDTH, TEXT_BOX_HEIGHT]);
+
+    pending_editor_events.extend(x_light_text_box.set(ids.x_light_text_box, ui).into_iter()
+                                                 .filter_map(|event| light_text_box_event_execute(event, "x", synced_editor_state, current_editor_state)));
 
     widget::Text::new("y:").mid_left_of(ids.light_panel_y_column)
                            .set(ids.y_light_label, ui);
 
-    for event in widget::TextBox::new(&editor_state.y_text_box_content).right_from(ids.y_light_label, WIDGET_DISTANCE)
-                                            .wh([TEXT_BOX_WIDTH, TEXT_BOX_HEIGHT])
-                                            .set(ids.y_text_box, ui) 
-    {
-        match event {
-            text_box::Event::Enter => {
-                if let Some(scene) = asset_manager.active_scene_mut() {
-                    match editor_state.y_text_box_content.parse::<f32>() {
-                        Ok(val) => {
-                            scene.set_light_position_y(val);
-                            if let Some(light_object) = scene.objects_mut().iter_mut().find(|x| x.light_source()) {
-                                light_object.set_position_y(val);
-                            }
-                        },
-                        Err(err) => {
-                            error!("Couldn't parse y light source text box: {}", err);
-                            editor_state.y_text_box_content = scene.light_position_y().to_string();
-                        },
-                    }
-                }
-            },
-            text_box::Event::Update(new_val) => {
-                editor_state.y_text_box_content = new_val;
-            }
-        }
-    }
+    let y_light_text_box = widget::TextBox::new(&current_editor_state.y_light_text_box_content).right_from(ids.y_light_label, WIDGET_DISTANCE)
+                                            .wh([TEXT_BOX_WIDTH, TEXT_BOX_HEIGHT]);
+
+    pending_editor_events.extend(y_light_text_box.set(ids.y_light_text_box, ui).into_iter()
+                                                 .filter_map(|event| light_text_box_event_execute(event, "y", synced_editor_state, current_editor_state)));
 
     widget::Text::new("z:").mid_left_of(ids.light_panel_z_column)
                            .set(ids.z_light_label, ui);
 
-    for event in widget::TextBox::new(&editor_state.z_text_box_content).right_from(ids.z_light_label, WIDGET_DISTANCE)
-                                            .wh([TEXT_BOX_WIDTH, TEXT_BOX_HEIGHT])
-                                            .set(ids.z_text_box, ui) 
-    {
-        match event {
-            text_box::Event::Enter => {
-                if let Some(scene) = asset_manager.active_scene_mut() {
-                    match editor_state.z_text_box_content.parse::<f32>() {
-                        Ok(val) => {
-                            scene.set_light_position_z(val);
-                            if let Some(light_object) = scene.objects_mut().iter_mut().find(|x| x.light_source()) {
-                                light_object.set_position_z(val);
-                            }
-                        },
-                        Err(err) => {
-                            error!("Couldn't parse z light source text box: {}", err);
-                            editor_state.z_text_box_content = scene.light_position_z().to_string();
-                        },
-                    }
-                }
-            },
-            text_box::Event::Update(new_val) => {
-                editor_state.z_text_box_content = new_val;
-            }
-        }
-    }
+    let z_light_text_box = widget::TextBox::new(&current_editor_state.z_light_text_box_content).right_from(ids.z_light_label, WIDGET_DISTANCE)
+                                            .wh([TEXT_BOX_WIDTH, TEXT_BOX_HEIGHT]);
+
+    pending_editor_events.extend(z_light_text_box.set(ids.z_light_text_box, ui).into_iter()
+                                                 .filter_map(|event| light_text_box_event_execute(event, "z", synced_editor_state, current_editor_state)));
+
 }

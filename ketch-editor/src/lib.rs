@@ -1,3 +1,4 @@
+use crate::editor_event::EditorEvent;
 use crate::editor_error::EditorCreationError;
 use ketch_core::resource::AssetManager;
 use vulkano::swapchain::Surface;
@@ -15,11 +16,11 @@ use editor_state::EditorState;
 use crate::widget_ids::Ids;
 use conrod_core::Ui;
 
-
 mod widget_ids;
 mod editor_state;
 mod editor_error;
 mod gui;
+mod editor_event;
 
 pub struct Editor {
     ui: Ui,
@@ -27,7 +28,9 @@ pub struct Editor {
     widget_ids: Ids,
     conrod_renderer: conrod_vulkano::Renderer,
     image_map: conrod_core::image::Map<conrod_vulkano::Image>,
-    editor_state: EditorState,
+    synced_editor_state: EditorState,
+    current_editor_state: EditorState,
+    pending_editor_events: Vec<EditorEvent>,
 }
 
 impl Editor {
@@ -61,7 +64,10 @@ impl Editor {
                 conrod_renderer,
                 image_map,
 
-                editor_state: EditorState::new(),
+                synced_editor_state: EditorState::new(),
+                current_editor_state: EditorState::new(),
+
+                pending_editor_events: Vec::new(),
             }
         )
     }
@@ -104,7 +110,7 @@ impl Editor {
         input_events.into_iter().filter_map(|event| conrod_winit::convert_event(event, window))
                                 .for_each(|event| self.ui.handle_event(event));
         if self.ui.global_input().events().next().is_some() {
-            self.gui(asset_manager);
+            self.update_gui();
         }
     }
 
@@ -162,8 +168,28 @@ impl Editor {
         command_buffer_builder
     }
 
-    pub fn run_game(&mut self) -> bool {
-        self.editor_state.run_game
+    pub fn sync_editor(&mut self, asset_manager: &AssetManager) {
+        let mut editor_state = EditorState::new();
+        if let Some(scene) = asset_manager.active_scene() {
+            let (light_x, light_y, light_z) = scene.light_position();
+            editor_state.x_light_text_box_content = light_x.to_string();
+            editor_state.y_light_text_box_content = light_y.to_string();
+            editor_state.z_light_text_box_content = light_z.to_string();
+        }
+        self.synced_editor_state = editor_state.clone();
+        self.current_editor_state = editor_state;
+    }
+
+    pub fn run_game(&self) -> bool {
+        self.current_editor_state.run_game
+    }
+
+    pub fn set_run_game(&mut self, run_game: bool, asset_manager: Option<&AssetManager>) {
+        if !run_game {
+            assert!(asset_manager.is_some(), "Asset manager has to be supplied when going back to the editor to sync game state with the editor!");
+            self.sync_editor(asset_manager.unwrap());
+        }
+        self.current_editor_state.run_game = run_game;
     }
 }
 
