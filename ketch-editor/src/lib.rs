@@ -1,3 +1,4 @@
+use std::time::Duration;
 use crate::editor_event::EditorEvent;
 use crate::editor_error::EditorCreationError;
 use ketch_core::resource::AssetManager;
@@ -190,6 +191,10 @@ impl Editor {
             self.sync_editor(asset_manager.unwrap());
         }
         self.current_editor_state.run_game = run_game;
+    }
+
+    pub fn update(&mut self, asset_manager: &mut AssetManager, _time_per_update: Duration) {
+        self.pending_editor_events.drain(..).for_each(|event| event.execute(asset_manager));
     }
 }
 

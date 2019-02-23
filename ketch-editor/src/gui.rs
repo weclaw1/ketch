@@ -28,6 +28,7 @@ impl Editor {
         let window_dimensions = ketch_core::renderer::get_window_dimensions(self.surface.window());
         let mut ui = self.ui.set_widgets();
 
+        run_button(&self.widget_ids, &mut ui, &self.synced_editor_state, &mut self.current_editor_state, &mut self.pending_editor_events);
         light_panel(&self.widget_ids, &mut ui, &self.synced_editor_state, &mut self.current_editor_state, &mut self.pending_editor_events);
     }
 }
@@ -82,4 +83,20 @@ fn light_panel(ids: &Ids, ui: &mut conrod_core::UiCell,
     pending_editor_events.extend(z_light_text_box.set(ids.z_light_text_box, ui).into_iter()
                                                  .filter_map(|event| light_text_box_event_execute(event, "z", synced_editor_state, current_editor_state)));
 
+}
+
+fn run_button(ids: &Ids, ui: &mut conrod_core::UiCell, 
+               _synced_editor_state: &EditorState, current_editor_state: &mut EditorState,
+               _pending_editor_events: &mut Vec<EditorEvent>) {
+    const BUTTON_TITLE: &str = "Run";
+    const BUTTON_WIDTH: f64 = 300.0;
+    const BUTTON_HEIGHT: f64 = 150.0;
+
+    for _press in widget::Button::new().label(BUTTON_TITLE)
+                                       .top_right()
+                                       .wh([BUTTON_WIDTH, BUTTON_HEIGHT])
+                                       .set(ids.run_button, ui) 
+    {
+        current_editor_state.run_game = true;
+    }
 }

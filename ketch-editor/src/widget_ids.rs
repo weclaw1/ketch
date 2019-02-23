@@ -13,5 +13,6 @@ widget_ids! {
         y_light_text_box,
         z_light_label,
         z_light_text_box,
+        run_button,
     }
 }

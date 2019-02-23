@@ -93,7 +93,7 @@ impl Engine {
         &mut self.asset_manager
     }
 
-    fn handle_input<S: EventHandler>(&mut self, state: &mut S) {
+    fn handle_input<S: EventHandler>(&mut self, game: &mut S) {
         let pending_events = self.input_system.fetch_pending_events();
         let mut esc_pressed = false;
 
@@ -120,18 +120,33 @@ impl Engine {
         match &mut self.editor {
             Some(editor) => {
                 if editor.run_game() && esc_pressed {
+                    self.input_system.grab_cursor(false);
+                    self.input_system.hide_cursor(false);
                     editor.set_run_game(false, Some(&self.asset_manager));
                 } else if editor.run_game() && !esc_pressed {
-                    state.process_input(&mut self.input_system, input::convert_to_input_events(pending_events));
+                    game.process_input(&mut self.input_system, input::convert_to_input_events(pending_events));
                 } else {
                     editor.handle_input(self.input_system.window().unwrap(), pending_events, &mut self.asset_manager);
                 }
             },
-            None => state.process_input(&mut self.input_system, input::convert_to_input_events(pending_events)),
+            None => game.process_input(&mut self.input_system, input::convert_to_input_events(pending_events)),
         }  
     }
 
-    pub fn run<S: EventHandler>(&mut self, mut state: S) {
+    fn update<S: EventHandler>(&mut self, game: &mut S, time_per_update: Duration) {
+        match &mut self.editor {
+            Some(editor) => {
+                if editor.run_game() {
+                    game.update(&self.settings, &mut self.asset_manager, time_per_update);
+                } else {
+                    editor.update(&mut self.asset_manager, time_per_update);
+                }
+            },
+            None => game.update(&self.settings, &mut self.asset_manager, time_per_update),
+        }
+    }
+
+    pub fn run<S: EventHandler>(&mut self, mut game: S) {
         let mut fps_counter = FPSCounter::new();
         let log_fps_frequency = self.settings.log_fps_frequency();
         let time_per_update = self.settings.time_per_update();
@@ -140,7 +155,7 @@ impl Engine {
         let mut previous_time = Instant::now();
         let mut lag = Duration::new(0, 0);
 
-        state.init(&self.settings, &mut self.asset_manager);
+        game.init(&self.settings, &mut self.asset_manager);
 
         if let Some(editor) = &mut self.editor {
             editor.sync_editor(&mut self.asset_manager);
@@ -151,10 +166,10 @@ impl Engine {
             previous_time = Instant::now();
             lag += elapsed;
             
-            self.handle_input(&mut state);
+            self.handle_input(&mut game);
 
             while lag >= time_per_update {
-                state.update(&self.settings, &mut self.asset_manager, time_per_update);
+                self.update(&mut game, time_per_update);
 
                 lag -= time_per_update;
             }
@@ -168,7 +183,9 @@ impl Engine {
             };
 
             if let Some(editor) = &mut self.editor {
-                command_buffer = editor.add_glyph_commands(command_buffer);
+                if !editor.run_game() {
+                    command_buffer = editor.add_glyph_commands(command_buffer);
+                }
             }
 
             let (image_num, acquire_future, mut command_buffer) = match self.renderer.render_scene(command_buffer, &mut self.asset_manager) {
@@ -180,7 +197,9 @@ impl Engine {
             };
 
             if let Some(editor) = &mut self.editor {
-                command_buffer = editor.add_draw_commands(self.renderer.queues().graphics_queue(), command_buffer);
+                if !editor.run_game() {
+                    command_buffer = editor.add_draw_commands(self.renderer.queues().graphics_queue(), command_buffer);
+                }
             }
 
             match self.renderer.execute_command_buffer(image_num, acquire_future, command_buffer) {
