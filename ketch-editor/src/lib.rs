@@ -1,3 +1,9 @@
+use ketch_core::input::input_event::ElementState::Released;
+use ketch_core::input::input_event::ElementState::Pressed;
+use ketch_core::input::input_event::VirtualKeyCode;
+use ketch_core::input::input_event::MouseButton;
+use crate::editor_state::EditorInputState;
+use ketch_core::settings::Settings;
 use std::time::Duration;
 use crate::editor_event::EditorEvent;
 use crate::editor_error::EditorCreationError;
@@ -31,11 +37,12 @@ pub struct Editor {
     image_map: conrod_core::image::Map<conrod_vulkano::Image>,
     synced_editor_state: EditorState,
     current_editor_state: EditorState,
+    editor_input_state: EditorInputState,
     pending_editor_events: Vec<EditorEvent>,
 }
 
 impl Editor {
-    pub fn new(renderer: &Renderer) -> Result<Self, EditorCreationError> {
+    pub fn new(renderer: &Renderer, settings: &Settings) -> Result<Self, EditorCreationError> {
         let surface = renderer.surface();
         let window_dimensions = ketch_core::renderer::get_window_dimensions(surface.window());
 
@@ -67,6 +74,7 @@ impl Editor {
 
                 synced_editor_state: EditorState::new(),
                 current_editor_state: EditorState::new(),
+                editor_input_state: EditorInputState::new(settings),
 
                 pending_editor_events: Vec::new(),
             }
@@ -107,7 +115,36 @@ impl Editor {
         &self.image_map
     }
 
-    pub fn handle_input(&mut self, window: &Window, input_events: Vec<Event>, asset_manager: &mut AssetManager) {
+    fn handle_camera_input(&mut self, input_events: Vec<InputEvent>) {
+        input_events.into_iter().for_each(|event| {
+            match event {
+                InputEvent::KeyboardInput { keycode, state } => match keycode {
+                    VirtualKeyCode::W if state == Pressed => self.editor_input_state.up = true,
+                    VirtualKeyCode::S if state == Pressed => self.editor_input_state.down = true,
+                    VirtualKeyCode::A if state == Pressed => self.editor_input_state.left = true,
+                    VirtualKeyCode::D if state == Pressed => self.editor_input_state.right = true,
+                    VirtualKeyCode::W if state == Released => self.editor_input_state.up = false,
+                    VirtualKeyCode::S if state == Released => self.editor_input_state.down = false,
+                    VirtualKeyCode::A if state == Released => self.editor_input_state.left = false,
+                    VirtualKeyCode::D if state == Released => self.editor_input_state.right = false,
+                    _ => (),
+                },
+                InputEvent::MouseInput { button, state } => match button {
+                    MouseButton::Right if state == Pressed => self.editor_input_state.right_mouse_button_pressed = true,
+                    MouseButton::Right if state == Released => self.editor_input_state.right_mouse_button_pressed = false,
+                    _ => (),
+                }
+                InputEvent::MouseMotion { delta } => {
+                    self.editor_input_state.mouse_delta_changed = true;
+                    self.editor_input_state.mouse_delta = (delta.0 as f32, delta.1 as f32);
+                },
+                _ => (),
+            }
+        })
+    }
+
+    pub fn handle_input(&mut self, window: &Window, input_events: Vec<Event>) {
+        self.handle_camera_input(ketch_core::input::convert_to_input_events(input_events.clone()));
         input_events.into_iter().filter_map(|event| conrod_winit::convert_event(event, window))
                                 .for_each(|event| self.ui.handle_event(event));
         if self.ui.global_input().events().next().is_some() {

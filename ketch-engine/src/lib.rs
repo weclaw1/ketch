@@ -58,7 +58,7 @@ impl Engine {
         let asset_manager = AssetManager::new(renderer.queues(), renderer.device());
 
         let editor = if opts.gui_editor {
-            match Editor::new(&renderer) {
+            match Editor::new(&renderer, &settings) {
                 Ok(editor) => Some(editor),
                 Err(e) => {
                     error!("Couldn't create editor: {}", e);
@@ -126,7 +126,7 @@ impl Engine {
                 } else if editor.run_game() && !esc_pressed {
                     game.process_input(&mut self.input_system, input::convert_to_input_events(pending_events));
                 } else {
-                    editor.handle_input(self.input_system.window().unwrap(), pending_events, &mut self.asset_manager);
+                    editor.handle_input(self.input_system.window().unwrap(), pending_events);
                 }
             },
             None => game.process_input(&mut self.input_system, input::convert_to_input_events(pending_events)),
