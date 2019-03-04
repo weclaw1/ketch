@@ -58,7 +58,7 @@ impl Engine {
         let asset_manager = AssetManager::new(renderer.queues(), renderer.device());
 
         let editor = if opts.gui_editor {
-            match Editor::new(&renderer, &settings) {
+            match Editor::new(&renderer) {
                 Ok(editor) => Some(editor),
                 Err(e) => {
                     error!("Couldn't create editor: {}", e);

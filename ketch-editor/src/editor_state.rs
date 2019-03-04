@@ -32,11 +32,11 @@ pub struct EditorInputState {
 }
 
 impl EditorInputState {
-    pub fn new(settings: &Settings) -> Self {
+    pub fn new() -> Self {
         EditorInputState {
             mouse_delta_changed: false,
             right_mouse_button_pressed: false,
-            camera_speed: 5.0 * (settings.time_per_update().subsec_millis() as f32 / 1000.0),
+            camera_speed: 5.0,
             mouse_sensitivity: 0.2,
             mouse_delta: (0.0, 0.0),
             up: false,

@@ -2,6 +2,8 @@ use ketch_core::input::input_event::ElementState::Released;
 use ketch_core::input::input_event::ElementState::Pressed;
 use ketch_core::input::input_event::VirtualKeyCode;
 use ketch_core::input::input_event::MouseButton;
+use ketch_core::resource::camera::Direction;
+
 use crate::editor_state::EditorInputState;
 use ketch_core::settings::Settings;
 use std::time::Duration;
@@ -42,7 +44,7 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn new(renderer: &Renderer, settings: &Settings) -> Result<Self, EditorCreationError> {
+    pub fn new(renderer: &Renderer) -> Result<Self, EditorCreationError> {
         let surface = renderer.surface();
         let window_dimensions = ketch_core::renderer::get_window_dimensions(surface.window());
 
@@ -74,7 +76,7 @@ impl Editor {
 
                 synced_editor_state: EditorState::new(),
                 current_editor_state: EditorState::new(),
-                editor_input_state: EditorInputState::new(settings),
+                editor_input_state: EditorInputState::new(),
 
                 pending_editor_events: Vec::new(),
             }
@@ -230,7 +232,39 @@ impl Editor {
         self.current_editor_state.run_game = run_game;
     }
 
-    pub fn update(&mut self, asset_manager: &mut AssetManager, _time_per_update: Duration) {
+    fn update_camera(&mut self, asset_manager: &mut AssetManager, update_time_delta: Duration) {
+        match asset_manager.active_scene_mut() {
+            Some(ref mut active_scene) if self.editor_input_state.right_mouse_button_pressed => {
+                let camera = active_scene.camera_mut();
+                if self.editor_input_state.mouse_delta_changed {
+                    let (x_delta, y_delta) = self.editor_input_state.mouse_delta;
+
+                    let current_yaw = camera.yaw();
+                    camera.set_yaw(current_yaw + x_delta * self.editor_input_state.mouse_sensitivity);
+
+                    let current_pitch = camera.pitch();
+                    camera.set_pitch(current_pitch + (-y_delta) * self.editor_input_state.mouse_sensitivity);
+                    self.editor_input_state.mouse_delta_changed = false;
+                }
+                if self.editor_input_state.up {
+                    camera.move_camera(Direction::Up, self.editor_input_state.camera_speed * (update_time_delta.as_millis() as f32 / 1000.0));
+                }
+                if self.editor_input_state.down {
+                    camera.move_camera(Direction::Down, self.editor_input_state.camera_speed * (update_time_delta.as_millis() as f32 / 1000.0));
+                }
+                if self.editor_input_state.left {
+                    camera.move_camera(Direction::Left, self.editor_input_state.camera_speed * (update_time_delta.as_millis() as f32 / 1000.0));
+                }
+                if self.editor_input_state.right {
+                    camera.move_camera(Direction::Right, self.editor_input_state.camera_speed * (update_time_delta.as_millis() as f32 / 1000.0));
+                }
+            }
+            _ => (),
+        }
+    } 
+
+    pub fn update(&mut self, asset_manager: &mut AssetManager, update_time_delta: Duration) {
+        self.update_camera(asset_manager, update_time_delta);
         self.pending_editor_events.drain(..).for_each(|event| event.execute(asset_manager));
     }
 }
