@@ -92,7 +92,7 @@ impl GameInput {
         })
     }
 
-    pub fn update_camera(&mut self, camera: &mut Camera) {
+    pub fn update_camera(&mut self, camera: &mut Camera, elapsed_time: Duration) {
         if self.mouse_delta_changed {
             let (x_delta, y_delta) = self.mouse_delta;
 
@@ -104,16 +104,16 @@ impl GameInput {
             self.mouse_delta_changed = false;
         }
         if self.up {
-            camera.move_camera(Direction::Up, self.camera_speed);
+            camera.move_camera(Direction::Up, self.camera_speed * (elapsed_time.as_millis() as f32 / 1000.0));
         }
         if self.down {
-            camera.move_camera(Direction::Down, self.camera_speed);
+            camera.move_camera(Direction::Down, self.camera_speed * (elapsed_time.as_millis() as f32 / 1000.0));
         }
         if self.left {
-            camera.move_camera(Direction::Left, self.camera_speed);
+            camera.move_camera(Direction::Left, self.camera_speed * (elapsed_time.as_millis() as f32 / 1000.0));
         }
         if self.right {
-            camera.move_camera(Direction::Right, self.camera_speed);
+            camera.move_camera(Direction::Right, self.camera_speed * (elapsed_time.as_millis() as f32 / 1000.0));
         }
     }
 
@@ -162,7 +162,7 @@ impl EventHandler for GameState {
             let (x, y, z) = object.rotation_angles();
             object.set_rotation_angles(x, y + 0.01, z);
         }
-        self.input.update_camera(asset_manager.active_scene_mut().unwrap().camera_mut());
+        self.input.update_camera(asset_manager.active_scene_mut().unwrap().camera_mut(), elapsed_time);
     }
 }
 
@@ -170,8 +170,7 @@ fn main() {
     env_logger::init();
     let mut engine = Engine::new(Settings::new("ŚWIATEŁA", 1024.0, 768.0));
     let time_per_update = engine.settings().time_per_update();
-    let camera_speed = 5.0 * (time_per_update.subsec_millis() as f32 / 1000.0);
-    let state = GameState::new(camera_speed, 0.2);
+    let state = GameState::new(5.0, 0.2);
 
     engine.run(state);
 }

@@ -1,3 +1,4 @@
+use ketch_core::input::InputSystem;
 use ketch_core::input::input_event::ElementState::Released;
 use ketch_core::input::input_event::ElementState::Pressed;
 use ketch_core::input::input_event::VirtualKeyCode;
@@ -117,7 +118,7 @@ impl Editor {
         &self.image_map
     }
 
-    fn handle_camera_input(&mut self, input_events: Vec<InputEvent>) {
+    fn handle_camera_input(&mut self, input_events: Vec<InputEvent>, input_system: &mut InputSystem) {
         input_events.into_iter().for_each(|event| {
             match event {
                 InputEvent::KeyboardInput { keycode, state } => match keycode {
@@ -132,8 +133,16 @@ impl Editor {
                     _ => (),
                 },
                 InputEvent::MouseInput { button, state } => match button {
-                    MouseButton::Right if state == Pressed => self.editor_input_state.right_mouse_button_pressed = true,
-                    MouseButton::Right if state == Released => self.editor_input_state.right_mouse_button_pressed = false,
+                    MouseButton::Right if state == Pressed => {
+                        self.editor_input_state.right_mouse_button_pressed = true;
+                        input_system.grab_cursor(true);
+                        input_system.hide_cursor(true);
+                    },
+                    MouseButton::Right if state == Released => {
+                        self.editor_input_state.right_mouse_button_pressed = false;
+                        input_system.grab_cursor(false);
+                        input_system.hide_cursor(false);
+                    }
                     _ => (),
                 }
                 InputEvent::MouseMotion { delta } => {
@@ -145,10 +154,12 @@ impl Editor {
         })
     }
 
-    pub fn handle_input(&mut self, window: &Window, input_events: Vec<Event>) {
-        self.handle_camera_input(ketch_core::input::convert_to_input_events(input_events.clone()));
-        input_events.into_iter().filter_map(|event| conrod_winit::convert_event(event, window))
-                                .for_each(|event| self.ui.handle_event(event));
+    pub fn handle_input(&mut self, input_events: Vec<Event>, input_system: &mut InputSystem) {
+        self.handle_camera_input(ketch_core::input::convert_to_input_events(input_events.clone()), input_system);
+        if let Some(window) = input_system.window() {
+            input_events.into_iter().filter_map(|event| conrod_winit::convert_event(event, window))
+                                    .for_each(|event| self.ui.handle_event(event));
+        }
         if self.ui.global_input().events().next().is_some() {
             self.update_gui();
         }

@@ -126,7 +126,7 @@ impl Engine {
                 } else if editor.run_game() && !esc_pressed {
                     game.process_input(&mut self.input_system, input::convert_to_input_events(pending_events));
                 } else {
-                    editor.handle_input(self.input_system.window().unwrap(), pending_events);
+                    editor.handle_input(pending_events, &mut self.input_system);
                 }
             },
             None => game.process_input(&mut self.input_system, input::convert_to_input_events(pending_events)),

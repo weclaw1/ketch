@@ -1,8 +1,12 @@
 [workspace]
-
 members = [
     "ketch-core",
     "ketch-engine",
     "ketch-editor",
     "example",
 ]
+
+[profile.release]
+# Unoptimized debug builds are too slow to profile
+# having debug info doesn't hurt perf for now
+debug = true
